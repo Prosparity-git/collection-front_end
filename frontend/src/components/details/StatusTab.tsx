@@ -17,10 +17,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFieldStatus } from "@/hooks/useFieldStatus";
 import { monthToEmiDate } from '@/utils/dateUtils';
 import { StatusManagementService } from '@/integrations/api/services/statusManagementService';
-import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
-import { getStatusLabel } from '@/utils/statusMapping';
-import RecentActivityCard from "./RecentActivityCard";
-import { useLoanRecentActivity } from '@/hooks/useRecentActivity';
 
 interface StatusTabProps {
   application: Application;
@@ -33,42 +29,41 @@ interface StatusTabProps {
   monthlyData?: any[]; // Add monthlyData to access month-specific status
 }
 
+// New demand status options (calling status)
+const DEMAND_STATUS_OPTIONS = [
+  { value: "1", label: "Deposited in Bank" },
+  { value: "2", label: "Cash Collected" },
+  { value: "3", label: "PTP Taken" },
+  { value: "4", label: "No Response" }
+];
+
+// Reverse mapping for backend string values to frontend labels
+const DEMAND_STATUS_BACKEND_MAPPING = {
+  "deposited in bank": "Deposited in Bank",
+  "cash collected": "Cash Collected", 
+  "ptp taken": "PTP Taken",
+  "no response": "No Response",
+  "no_response": "No Response",
+  "noresponse": "No Response",
+  "deposited_in_bank": "Deposited in Bank",
+  "cash_collected": "Cash Collected",
+  "ptp_taken": "PTP Taken",
+  "1": "Deposited in Bank",
+  "2": "Cash Collected",
+  "3": "PTP Taken", 
+  "4": "No Response"
+};
 
 // New repayment status options (collection status)
 const REPAYMENT_STATUS_OPTIONS = [
-  { value: "1", label: "Future", disabled: true },
-  { value: "4", label: "Overdue" },
+  { value: "1", label: "Future" },
   { value: "2", label: "Partially Paid" },
+  // { value: "3", label: "Paid" },
+  { value: "4", label: "Overdue" },
   { value: "5", label: "Foreclose" },
   { value: "6", label: "Paid (Pending Approval)" },
-  // { value: "3", label: "Paid" },
   // { value: "7", label: "Paid Rejected" }
 ];
-
-// Map backend status values to frontend dropdown values
-const mapBackendStatusToDropdownValue = (backendStatus: string | null | undefined): string => {
-  if (!backendStatus) return '';
-  
-  const normalizedValue = backendStatus.toLowerCase().trim();
-  const mapping: Record<string, string> = {
-    "future": "1",
-    "overdue": "4", 
-    "partially paid": "2",
-    "foreclose": "5",
-    "paid (pending approval)": "6",
-    "paid": "3",
-    "paid rejected": "7",
-    "1": "1",
-    "4": "4",
-    "2": "2", 
-    "5": "5",
-    "6": "6",
-    "3": "3",
-    "7": "7"
-  };
-  
-  return mapping[normalizedValue] || '';
-};
 
 const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, addAuditLog, selectedMonth, refetchStatusCounts, monthlyData }: StatusTabProps) => {
   // Debug application data
@@ -86,12 +81,13 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const [amountCollected, setAmountCollected] = useState<string>(application.amount_collected?.toString() ?? '');
   const { fetchFieldStatus, updateFieldStatus } = useFieldStatus();
   const [currentStatus, setCurrentStatus] = useState<string>('Not Set');
-  const { notifyStatusUpdate, notifyPtpDateUpdate, notifyAmountCollectedUpdate } = useRealtimeUpdates();
+  const [currentDemandStatus, setCurrentDemandStatus] = useState<string>('');
   
   // Form state for the 4 fields - keep these independent for user input
   // These fields start empty and are controlled by user input, NOT by API data
   // The current status display cards show the API values, but form fields are for new input
   const [formData, setFormData] = useState({
+    demandStatus: '', // Start empty for user input
     repaymentStatus: '', // Start empty for user input
     ptpDate: '', // Start empty for user input
     amountCollected: '' // Start empty for user input
@@ -103,24 +99,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const isStatusPaid = useMemo(() => {
     return currentStatus === '3' || currentStatus === 'Paid';
   }, [currentStatus]);
-
-  // Memoize the recent activity params to prevent infinite re-renders
-  const recentActivityParams = useMemo(() => ({
-    repayment_id: application.payment_id || undefined,
-    limit: 10,
-    days_back: 30
-  }), [application.payment_id]);
-
-  // Recent activity hook - only fetch if we have a loan_id
-  const { 
-    activities: recentActivities, 
-    loading: activitiesLoading, 
-    error: activitiesError, 
-    refreshActivities 
-  } = useLoanRecentActivity(
-    application.loan_id || null,
-    recentActivityParams
-  );
 
   // PTP date synchronization - improved to handle month-specific data
   useEffect(() => {
@@ -145,14 +123,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           } else if (application.ptp_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
             // YYYY-MM-DD format
             parsedDate = new Date(application.ptp_date + 'T00:00:00.000Z');
-          } else if (application.ptp_date.match(/^\d{2}-\d{2}-\d{2}$/)) {
-            // YY-MM-DD format (like "25-09-13" = 2025-09-13)
-            const [year, month, day] = application.ptp_date.split('-');
-            // Convert 2-digit year to 4-digit year (assuming 20xx for years 00-99)
-            const fullYear = parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
-            // Use UTC to avoid timezone issues
-            parsedDate = new Date(Date.UTC(fullYear, parseInt(month) - 1, parseInt(day)));
-            console.log('🔄 Parsing YY-MM-DD format:', { original: application.ptp_date, year: fullYear, month, day, parsed: parsedDate });
           } else {
             // Try parsing as generic date
             parsedDate = new Date(application.ptp_date);
@@ -189,162 +159,21 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       ptp_date: application.ptp_date
     });
     
-    // Initialize form fields with current values from application payload
-    const updates: any = {};
+    // Only set the display states, NOT the form input fields
+    // Form fields should remain independent for user input
+    // This ensures users can type new values without them being overridden
     
-    // Initialize dropdown with current status from application payload
+    // Synchronize demand calling status display
+    if (application.demand_calling_status) {
+      setCurrentDemandStatus(application.demand_calling_status);
+    }
+    
+    // Synchronize status display
     if (application.status && application.status !== 'Unknown') {
-      const dropdownValue = mapBackendStatusToDropdownValue(application.status);
-      console.log('🔄 StatusTab: Setting dropdown value from application status:', {
-        status: application.status,
-        dropdownValue: dropdownValue
-      });
-      updates.repaymentStatus = dropdownValue;
       setCurrentStatus(application.status);
-    }
-    
-    // Initialize PTP Date from application payload
-    if (application.ptp_date) {
-      try {
-        let inputValue = '';
-        
-        if (typeof application.ptp_date === 'string') {
-          let parsedDate: Date;
-          
-          // Handle different date formats
-          if (application.ptp_date.includes('T') || application.ptp_date.includes('Z')) {
-            // ISO string format
-            parsedDate = new Date(application.ptp_date);
-          } else if (application.ptp_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            // YYYY-MM-DD format
-            parsedDate = new Date(application.ptp_date + 'T00:00:00.000Z');
-          } else if (application.ptp_date.match(/^\d{2}-\d{2}-\d{2}$/)) {
-            // YY-MM-DD format (like "25-09-13" = 2025-09-13)
-            const [year, month, day] = application.ptp_date.split('-');
-            // Convert 2-digit year to 4-digit year (assuming 20xx for years 00-99)
-            const fullYear = parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
-            // Use UTC to avoid timezone issues
-            parsedDate = new Date(Date.UTC(fullYear, parseInt(month) - 1, parseInt(day)));
-            console.log('🔄 Parsing YY-MM-DD format:', { original: application.ptp_date, year: fullYear, month, day, parsed: parsedDate });
-          } else {
-            // Try parsing as generic date
-            parsedDate = new Date(application.ptp_date);
-          }
-          
-          if (!isNaN(parsedDate.getTime())) {
-            // Format for HTML date input (YYYY-MM-DD)
-            inputValue = parsedDate.toISOString().split('T')[0];
-            console.log('✅ Parsed PTP date for input:', inputValue);
-            updates.ptpDate = inputValue;
-          } else {
-            console.warn('⚠️ Could not parse PTP date:', application.ptp_date);
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error parsing PTP date:', error);
-      }
-    }
-    
-    // Initialize Amount Collected from application payload
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ Setting amount collected from API:', amountString);
-        updates.amountCollected = amountString;
-      }
-    }
-    
-    // Update form data with all collected updates
-    if (Object.keys(updates).length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        ...updates
-      }));
     }
     
   }, []); // Empty dependency array - only run on mount
-
-  // Update form fields when application data changes (e.g., when switching applications or months)
-  useEffect(() => {
-    const updates: any = {};
-    
-    // Update dropdown when application status changes
-    if (application.status && application.status !== 'Unknown') {
-      const dropdownValue = mapBackendStatusToDropdownValue(application.status);
-      console.log('🔄 StatusTab: Updating dropdown value from application status change:', {
-        status: application.status,
-        dropdownValue: dropdownValue,
-        selectedMonth: selectedMonth
-      });
-      updates.repaymentStatus = dropdownValue;
-      setCurrentStatus(application.status);
-    }
-    
-    // Update PTP Date when application data changes
-    if (application.ptp_date) {
-      try {
-        let inputValue = '';
-        
-        if (typeof application.ptp_date === 'string') {
-          let parsedDate: Date;
-          
-          // Handle different date formats
-          if (application.ptp_date.includes('T') || application.ptp_date.includes('Z')) {
-            // ISO string format
-            parsedDate = new Date(application.ptp_date);
-          } else if (application.ptp_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            // YYYY-MM-DD format
-            parsedDate = new Date(application.ptp_date + 'T00:00:00.000Z');
-          } else if (application.ptp_date.match(/^\d{2}-\d{2}-\d{2}$/)) {
-            // YY-MM-DD format (like "25-09-13" = 2025-09-13)
-            const [year, month, day] = application.ptp_date.split('-');
-            // Convert 2-digit year to 4-digit year (assuming 20xx for years 00-99)
-            const fullYear = parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
-            // Use UTC to avoid timezone issues
-            parsedDate = new Date(Date.UTC(fullYear, parseInt(month) - 1, parseInt(day)));
-            console.log('🔄 Parsing YY-MM-DD format:', { original: application.ptp_date, year: fullYear, month, day, parsed: parsedDate });
-          } else {
-            // Try parsing as generic date
-            parsedDate = new Date(application.ptp_date);
-          }
-          
-          if (!isNaN(parsedDate.getTime())) {
-            // Format for HTML date input (YYYY-MM-DD)
-            inputValue = parsedDate.toISOString().split('T')[0];
-            console.log('✅ Updating PTP date from application change:', inputValue);
-            updates.ptpDate = inputValue;
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error parsing PTP date on application change:', error);
-      }
-    } else {
-      // Clear PTP date if not available
-      updates.ptpDate = '';
-    }
-    
-    // Update Amount Collected when application data changes
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ Updating amount collected from application change:', amountString);
-        updates.amountCollected = amountString;
-      } else {
-        updates.amountCollected = '';
-      }
-    } else {
-      // Clear amount collected if not available
-      updates.amountCollected = '';
-    }
-    
-    // Update form data with all collected updates
-    if (Object.keys(updates).length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        ...updates
-      }));
-    }
-  }, [application.status, application.ptp_date, application.amount_collected, selectedMonth]);
 
   // Fetch current status on mount or when application changes
   useEffect(() => {
@@ -406,6 +235,13 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         // Check if application has demand_calling_status from API response
         if (application.demand_calling_status) {
           console.log('✅ StatusTab: Using demand_calling_status from API:', application.demand_calling_status);
+          setCurrentDemandStatus(application.demand_calling_status);
+          
+          // Don't update form data - keep form fields independent for user input
+          // setFormData(prev => ({
+          //   ...prev,
+          //   demandStatus: application.demand_calling_status
+          // }));
         }
         
         // Fallback to field_status only if monthlyData doesn't have the status
@@ -424,7 +260,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         const fetchedStatus = statusRow?.status || 'Not Set';
         const fetchedDemandStatus = statusRow?.calling_status || '';
         
-        console.log('📋 Fetched status from field_status:', { status: fetchedStatus });
+        console.log('📋 Fetched status from field_status:', { status: fetchedStatus, demandStatus: fetchedDemandStatus });
         
         // Only set status if we don't have it from application data
         if (!application.status || application.status === 'Unknown') {
@@ -435,6 +271,14 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         // This prevents overriding the correct API value with database values
         if (!application.demand_calling_status) {
           console.log('⚠️ No API demand_calling_status, using database fallback:', fetchedDemandStatus);
+          setCurrentDemandStatus(fetchedDemandStatus);
+          
+          // Don't update form data - keep form fields independent for user input
+          // setFormData(prev => ({
+          //   ...prev,
+          //   demandStatus: fetchedDemandStatus,
+          //   repaymentStatus: fetchedStatus && fetchedStatus !== 'Not Set' ? fetchedStatus : ''
+          // }));
         } else {
           console.log('✅ Keeping API demand_calling_status, not overriding with database value');
           // Don't update form data - keep form fields independent for user input
@@ -503,13 +347,53 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     });
   }, [application.amount_collected, formData.amountCollected, amountCollected]);
 
+  // Debug currentDemandStatus changes
+  useEffect(() => {
+    console.log('🔍 currentDemandStatus changed:', currentDemandStatus);
+    console.log('🔍 Application demand_calling_status:', application.demand_calling_status);
+    console.log('🔍 Form data demandStatus:', formData.demandStatus);
+    console.log('🔍 Available mapping keys:', Object.keys(DEMAND_STATUS_BACKEND_MAPPING));
+    if (currentDemandStatus) {
+      console.log('🔍 Mapping result:', DEMAND_STATUS_BACKEND_MAPPING[currentDemandStatus.toLowerCase()]);
+    }
+  }, [currentDemandStatus, application.demand_calling_status, formData.demandStatus]);
+  
   // Debug selected month changes
   useEffect(() => {
     console.log('🔍 Selected month changed:', selectedMonth);
-  }, [selectedMonth]);
+    console.log('🔍 Application demand_calling_status:', application.demand_calling_status);
+    console.log('🔍 Current demand status state:', currentDemandStatus);
+  }, [selectedMonth, application.demand_calling_status, currentDemandStatus]);
   
+  // Initialize demand status from application data
+  useEffect(() => {
+    if (application.demand_calling_status && !currentDemandStatus) {
+      console.log('🔍 Initializing demand status from application data:', application.demand_calling_status);
+      setCurrentDemandStatus(application.demand_calling_status);
+      // Don't update form data - keep form fields independent
+      // setFormData(prev => ({ ...prev, demandStatus: application.demand_calling_status }));
+    }
+  }, [application.demand_calling_status, currentDemandStatus]);
   
+  // Synchronize form data with application data changes
+  useEffect(() => {
+    if (application.demand_calling_status && application.demand_calling_status !== currentDemandStatus) {
+      console.log('🔍 Synchronizing demand status from application data change:', application.demand_calling_status);
+      setCurrentDemandStatus(application.demand_calling_status);
+      // Don't update form data - keep form fields independent
+      // setFormData(prev => ({ ...prev, demandStatus: application.demand_calling_status }));
+    }
+  }, [application.demand_calling_status]);
   
+  // Direct synchronization of form data with API payload
+  useEffect(() => {
+    console.log('🔍 API demand_calling_status changed:', application.demand_calling_status);
+    if (application.demand_calling_status) {
+      // Don't update form data - keep form fields independent
+      // setFormData(prev => ({ ...prev, demandStatus: application.demand_calling_status }));
+      setCurrentDemandStatus(application.demand_calling_status);
+    }
+  }, [application.demand_calling_status]);
   
   // Use the hook directly without wrapping in useMemo
   const statusAndPtpLogs = useFilteredAuditLogs(auditLogs);
@@ -518,6 +402,14 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const handleFormFieldChange = (field: string, value: any) => {
     console.log(`🔄 Form field change: ${field} =`, value, 'Type:', typeof value);
     
+    if (field === 'demandStatus') {
+      console.log('🎯 Demand status change:', {
+        oldValue: formData.demandStatus,
+        newValue: value,
+        oldType: typeof formData.demandStatus,
+        newType: typeof value
+      });
+    }
     
     setFormData(prev => {
       const newData = {
@@ -532,6 +424,11 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   // Debug form data changes specifically
   useEffect(() => {
     console.log('📊 Form data changed:', {
+      demandStatus: {
+        value: formData.demandStatus,
+        type: typeof formData.demandStatus,
+        label: DEMAND_STATUS_OPTIONS.find(opt => opt.value === formData.demandStatus)?.label || 'Not found'
+      },
       repaymentStatus: {
         value: formData.repaymentStatus,
         type: typeof formData.repaymentStatus,
@@ -540,20 +437,27 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       ptpDate: formData.ptpDate,
       amountCollected: formData.amountCollected
     });
-  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected]);
+  }, [formData.demandStatus, formData.repaymentStatus, formData.ptpDate, formData.amountCollected]);
 
   // Debug form data on every render
   useEffect(() => {
     console.log('🔍 Current form data:', formData);
+    console.log('🔍 Current demand status state:', { 
+      currentDemandStatus, 
+      applicationDemandStatus: application.demand_calling_status,
+      formDemandStatus: formData.demandStatus,
+      formDemandStatusType: typeof formData.demandStatus
+    });
     console.log('🔍 Current validation state:', {
       user: !!user,
       selectedMonth,
       applicantId: application?.applicant_id,
-      hasFormData: !!(formData.repaymentStatus || 
+      hasFormData: !!(formData.demandStatus || 
+                      formData.repaymentStatus || 
                       formData.ptpDate || 
                       (formData.amountCollected !== undefined && formData.amountCollected !== '' && formData.amountCollected !== '0'))
     });
-  }, [formData, user, selectedMonth, application?.applicant_id]);
+  }, [formData, user, selectedMonth, application?.applicant_id, currentDemandStatus, application.demand_calling_status]);
 
   // Handle form submission using the new StatusManagementService
   const handleSubmit = async () => {
@@ -574,7 +478,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     // Removed application ID validation as it's not required
 
     // Check if form has any data to submit
-    const hasFormData = formData.repaymentStatus || 
+    const hasFormData = formData.demandStatus || 
+                       formData.repaymentStatus || 
                        formData.ptpDate || 
                        (formData.amountCollected !== undefined && formData.amountCollected !== '' && formData.amountCollected !== '0');
 
@@ -584,7 +489,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     }
 
     // Prevent submission if status is "Paid" and user is trying to change any fields
-    if (isStatusPaid && (formData.repaymentStatus || formData.ptpDate || formData.amountCollected !== '')) {
+    if (isStatusPaid && (formData.demandStatus || formData.repaymentStatus || formData.ptpDate || formData.amountCollected !== '')) {
       toast.error('Cannot change any fields when current status is "Paid". All fields are locked for paid applications.');
       return;
     }
@@ -605,6 +510,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       const statusUpdatePayload = {
         repayment_id: repaymentId,
         calling_type: 2, // 2 for demand calling
+        demand_calling_status: formData.demandStatus ? parseInt(formData.demandStatus, 10) : undefined,
         repayment_status: formData.repaymentStatus ? parseInt(formData.repaymentStatus, 10) : undefined,
         ptp_date: formData.ptpDate || undefined,
         amount_collected: formData.amountCollected ? parseFloat(formData.amountCollected) : undefined,
@@ -630,30 +536,35 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       console.log('✅ Status update successful:', result);
       
       // Update local state
+      if (formData.demandStatus) {
+        setCurrentDemandStatus(formData.demandStatus);
+      }
       if (formData.repaymentStatus) {
         setCurrentStatus(formData.repaymentStatus);
         onStatusChange(formData.repaymentStatus);
-        
-        // Get the status label for realtime updates
-        const statusLabel = getStatusLabel(formData.repaymentStatus);
-        
-        // Notify realtime updates with the label instead of integer
-        notifyStatusUpdate(application.applicant_id, statusLabel);
       }
       if (formData.ptpDate) {
         setPtpDate(formData.ptpDate);
         onPtpDateChange(formData.ptpDate);
-        // Notify realtime updates
-        notifyPtpDateUpdate(application.applicant_id, formData.ptpDate);
       }
       if (formData.amountCollected !== undefined) {
         setAmountCollected(formData.amountCollected);
-        // Notify realtime updates
-        notifyAmountCollectedUpdate(application.applicant_id, parseFloat(formData.amountCollected));
       }
 
       // Add audit logs for changed fields
       
+      if (formData.demandStatus && formData.demandStatus !== currentDemandStatus) {
+        const oldLabel = DEMAND_STATUS_BACKEND_MAPPING[currentDemandStatus?.toLowerCase()] || currentDemandStatus;
+        const newLabel = DEMAND_STATUS_OPTIONS.find(opt => opt.value === formData.demandStatus)?.label || formData.demandStatus;
+        
+        await addAuditLog(
+          application.applicant_id,
+          'Demand Status',
+          oldLabel,
+          newLabel,
+          '' // Empty string since month is now linked via repayment_id
+        );
+      }
       
       if (formData.repaymentStatus && formData.repaymentStatus !== currentStatus) {
         const oldLabel = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === currentStatus)?.label || currentStatus;
@@ -755,7 +666,64 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
             </div>
           )}
           <div className="space-y-4">
+            {/* Demand Status dropdown */}
+            <div>
+              <Label htmlFor="demandStatus">Demand Status</Label>
+              <Select 
+                key={`demand-${formData.demandStatus}`} // Force re-render when value changes
+                value={formData.demandStatus || ''} // Ensure value is never undefined
+                onValueChange={(value) => handleFormFieldChange('demandStatus', value)}
+                disabled={isStatusPaid}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select demand status..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEMAND_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isStatusPaid && (
+                <div className="text-xs text-amber-600 mt-1">
+                  Demand status cannot be changed when repayment status is "Paid"
+                </div>
+              )}
+            </div>
             
+            {/* Current Demand Status Display Card */}
+            <div className="col-span-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div className="text-xs text-gray-600 mb-2 font-medium">Current Demand Status for {selectedMonth}</div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500">Demand Status:</span>
+                <Badge variant="outline" className="text-xs">
+                  {(() => {
+                    // Use the same pattern as repayment status - read from demand_calling_status field
+                    const apiDemandStatus = application.demand_calling_status;
+                    
+                    if (!apiDemandStatus) {
+                      return 'Not Set';
+                    }
+                    
+                    // Map the backend values to frontend labels using the same pattern as repayment status
+                    const statusMap: { [key: string]: string } = {
+                      'no response': 'No Response',
+                      'no_response': 'No Response',
+                      'ptp taken': 'PTP Taken',
+                      'ptp_taken': 'PTP Taken',
+                      'deposited in bank': 'Deposited in Bank',
+                      'deposited_in_bank': 'Deposited in Bank',
+                      'cash collected': 'Cash Collected',
+                      'cash_collected': 'Cash Collected'
+                    };
+                    
+                    return statusMap[apiDemandStatus.toLowerCase()] || apiDemandStatus;
+                  })()}
+                </Badge>
+              </div>
+            </div>
             
             {/* Repayment Status dropdown */}
             <div>
@@ -771,11 +739,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 </SelectTrigger>
                 <SelectContent>
                   {REPAYMENT_STATUS_OPTIONS.map((option) => (
-                    <SelectItem 
-                      key={option.value} 
-                      value={option.value}
-                      disabled={option.disabled}
-                    >
+                    <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
@@ -788,6 +752,20 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
               )}
             </div>
             
+            {/* Current Status Display Line */}
+            <div className="col-span-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div className="text-xs text-gray-600 mb-2 font-medium">Current Repayment Status for {selectedMonth}</div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500">Repayment Status:</span>
+                <Badge variant="outline" className="text-xs">
+                  {currentStatus ? 
+                    REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === currentStatus)?.label || currentStatus 
+                    : 'Not Set'
+                  }
+                </Badge>
+              </div>
+            </div>
+            
             {/* PTP DATE INPUT */}
             <div>
               <Label htmlFor="ptpDate">PTP Date</Label>
@@ -798,17 +776,38 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 value={formData.ptpDate || ''} // Ensure value is never undefined
                 onChange={(e) => handleFormFieldChange('ptpDate', e.target.value)}
                 className="mt-1"
-                placeholder={application.ptp_date ? "Select PTP date" : "No PTP date set - select a date"}
+                placeholder="Select PTP date"
                 disabled={isStatusPaid}
               />
               {!application.ptp_date && !isStatusPaid && (
-                <div className="text-xs text-gray-500">No PTP date set - enter a date above</div>
+                <div className="text-xs text-gray-500">No PTP date set</div>
               )}
               {isStatusPaid && (
                 <div className="text-xs text-amber-600 mt-1">
                   PTP date cannot be changed when current status is "Paid"
                 </div>
               )}
+            </div>
+
+            {/* Current PTP Date Display Card */}
+            <div className="col-span-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div className="text-xs text-gray-600 mb-2 font-medium">Current PTP Date for {selectedMonth}</div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500">PTP Date:</span>
+                <Badge variant="outline" className="text-xs">
+                  {application.ptp_date ? 
+                    (() => {
+                      try {
+                        const date = new Date(application.ptp_date);
+                        return format(date, 'dd-MMM-yyyy');
+                      } catch {
+                        return application.ptp_date;
+                      }
+                    })()
+                    : 'Not Set'
+                  }
+                </Badge>
+              </div>
             </div>
 
             {/* AMOUNT COLLECTED INPUT */}
@@ -819,18 +818,29 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 type="text"
                 value={formData.amountCollected || ''} // Ensure value is never undefined
                 onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
-                placeholder={application.amount_collected ? "Enter amount collected" : "No amount collected - enter amount above"}
+                placeholder="Enter amount collected"
                 className="mt-1"
                 disabled={isStatusPaid}
               />
-              {!application.amount_collected && !isStatusPaid && (
-                <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
-              )}
               {isStatusPaid && (
                 <div className="text-xs text-amber-600 mt-1">
                   Amount collected cannot be changed when current status is "Paid"
                 </div>
               )}
+            </div>
+
+            {/* Current Amount Collected Display Card */}
+            <div className="col-span-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <div className="text-xs text-gray-600 mb-2 font-medium">Current Amount Collected for {selectedMonth}</div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500">Amount Collected:</span>
+                <Badge variant="outline" className="text-xs">
+                  {application.amount_collected ? 
+                    `₹${application.amount_collected.toLocaleString('en-IN')}` 
+                    : '₹0'
+                  }
+                </Badge>
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -919,19 +929,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         title="Status & PTP Date History"
         type="audit"
       /> */}
-
-      {/* Recent Activity Card */}
-      {application.loan_id && (
-        <RecentActivityCard
-          activities={recentActivities}
-          loading={activitiesLoading}
-          error={activitiesError}
-          onRefresh={refreshActivities}
-          title="Recent Activity"
-          showHeader={true}
-          maxItems={10}
-        />
-      )}
     </div>
   );
 };

@@ -2,7 +2,8 @@ import { toast } from "@/hooks/use-toast";
 import { formatEmiMonth, getCurrentEmiMonth } from '@/utils/formatters';
 
 // Export the API base URL for use in services
-export const API_BASE_URL = "http://13.202.252.149:8000/api/v1"; 
+//export const API_BASE_URL = "http://13.203.110.46:8000/api/v1"; 
+export const API_BASE_URL = import.meta.env.VITE_API_URL + "/api/v1";
 
 // API Response wrapper for consistent error handling
 export interface ApiResponse<T = any> {
@@ -82,7 +83,6 @@ interface ApiApplicationItem {
   payment_id?: number; // Added payment_id field
   demand_num?: string; // Added demand_num field
   applicant_name: string;
-  mobile?: string; // Added mobile field from API response
   emi_amount: number;
   status: string;
   emi_month: string;
@@ -146,7 +146,7 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
       user_name: 'Unknown'
     })),
     comments: apiItem.comments, 
-    applicant_mobile: apiItem.mobile || '',
+    applicant_mobile: '',
     applicant_address: '',
     co_applicant_name: '',
     co_applicant_mobile: '',
@@ -205,7 +205,7 @@ export async function getFilteredApplications(
   emiMonth: string = getCurrentEmiMonth(),
   search: string = "",
   offset: number = 0,
-  limit: number = 1000
+  limit: number = 20
 ): Promise<{ total: number; applications: any[] }> {
   const params = new URLSearchParams({
     emi_month: emiMonth,
@@ -230,7 +230,7 @@ export async function getApplicationsList(emiMonth: string = getCurrentEmiMonth(
   const params = new URLSearchParams({
     emi_month: emiMonth,
     offset: "0",
-    limit: "20"
+    limit: "1000"
   });
 
   const res = await fetch(`${API_BASE_URL}/applications/?${params.toString()}`, {

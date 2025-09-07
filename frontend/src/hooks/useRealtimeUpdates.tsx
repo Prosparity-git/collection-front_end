@@ -1,131 +1,151 @@
-import { createContext, useContext, useCallback, useRef } from 'react';
 
-interface RealtimeUpdateContextType {
-  subscribe: (callback: (data: any) => void) => () => void;
-  notify: (data: any) => void;
-  notifyApplicationUpdate: (applicationId: string, updates: any) => void;
-  notifyStatusUpdate: (applicationId: string, status: string) => void;
-  notifyPreEmiStatusUpdate: (applicationId: string, preEmiStatus: string) => void;
-  notifyPtpDateUpdate: (applicationId: string, ptpDate: string) => void;
-  notifyAmountCollectedUpdate: (applicationId: string, amount: number) => void;
-  notifyCommentAdded: (applicationId: string, comment: any) => void;
-  notifyContactStatusUpdate: (applicationId: string, contactType: string, status: string) => void;
+import { useEffect, useRef } from 'react';
+import { client } from '@/integrations/api/client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface UseRealtimeUpdatesProps {
+  onApplicationUpdate?: () => void;
+  onCallingLogUpdate?: () => void;
+  onAuditLogUpdate?: () => void;
+  onCommentUpdate?: () => void;
+  onPtpDateUpdate?: () => void;
 }
 
-const RealtimeUpdateContext = createContext<RealtimeUpdateContextType | null>(null);
+export const useRealtimeUpdates = ({
+  onApplicationUpdate,
+  onCallingLogUpdate,
+  onAuditLogUpdate,
+  onCommentUpdate,
+  onPtpDateUpdate
+}: UseRealtimeUpdatesProps) => {
+  const { user } = useAuth();
+  const channelsRef = useRef<any[]>([]);
+  const isActiveRef = useRef(true);
+  const updateTimeoutRef = useRef<NodeJS.Timeout>();
 
-export const useRealtimeUpdates = () => {
-  const context = useContext(RealtimeUpdateContext);
-  if (!context) {
-    throw new Error('useRealtimeUpdates must be used within a RealtimeUpdateProvider');
-  }
-  return context;
-};
+  useEffect(() => {
+    if (!user) return;
 
-export const useRealtimeUpdateProvider = () => {
-  const subscribers = useRef<Set<(data: any) => void>>(new Set());
+    console.log('=== SETTING UP OPTIMIZED REAL-TIME SUBSCRIPTIONS ===');
 
-  const subscribe = useCallback((callback: (data: any) => void) => {
-    subscribers.current.add(callback);
-    
-    // Return unsubscribe function
-    return () => {
-      subscribers.current.delete(callback);
-    };
-  }, []);
-
-  const notify = useCallback((data: any) => {
-    subscribers.current.forEach(callback => {
-      try {
-        callback(data);
-      } catch (error) {
-        console.error('Error in realtime update callback:', error);
+    // Track page visibility to pause/resume connections
+    const handleVisibilityChange = () => {
+      isActiveRef.current = !document.hidden;
+      
+      if (document.hidden) {
+        console.log('🛑 Tab hidden - pausing real-time updates');
+        // Clear any pending updates
+        if (updateTimeoutRef.current) {
+          clearTimeout(updateTimeoutRef.current);
+        }
+      } else {
+        console.log('👁️ Tab visible - resuming real-time updates');
+        // Trigger a delayed refresh when tab becomes active again
+        updateTimeoutRef.current = setTimeout(() => {
+          if (isActiveRef.current) {
+            onApplicationUpdate?.();
+          }
+        }, 1000); // Increased delay to allow for settling
       }
-    });
-  }, []);
+    };
 
-  const notifyApplicationUpdate = useCallback((applicationId: string, updates: any) => {
-    console.log('🔄 RealtimeUpdate: Notifying application update:', { applicationId, updates });
-    notify({
-      type: 'APPLICATION_UPDATE',
-      applicationId,
-      updates,
-      timestamp: Date.now()
-    });
-  }, [notify]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-  const notifyStatusUpdate = useCallback((applicationId: string, status: string) => {
-    console.log('🔄 RealtimeUpdate: Notifying status update:', { applicationId, status });
-    notify({
-      type: 'STATUS_UPDATE',
-      applicationId,
-      status,
-      timestamp: Date.now()
-    });
-  }, [notify]);
+    // Create optimized real-time subscriptions with improved debouncing
+    const createSubscription = (tableName: string, callback: () => void) => {
+      return client
+        .channel(`${tableName}-changes-optimized`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: tableName
+          },
+          (payload) => {
+            // Only process updates if tab is active
+            if (isActiveRef.current) {
+              console.log(`✅ ${tableName} update received:`, payload);
+              
+              // Clear any existing timeout to debounce rapid updates
+              if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+              }
+              
+              // Debounce the callback to prevent rapid-fire updates
+              updateTimeoutRef.current = setTimeout(() => {
+                if (isActiveRef.current) {
+                  callback();
+                }
+              }, 500); // 500ms debounce for better stability
+            } else {
+              console.log(`⏸️ ${tableName} update received but tab inactive`);
+            }
+          }
+        )
+        .subscribe();
+    };
 
-  const notifyPreEmiStatusUpdate = useCallback((applicationId: string, preEmiStatus: string) => {
-    console.log('🔄 RealtimeUpdate: Notifying pre-EMI status update:', { applicationId, preEmiStatus });
-    notify({
-      type: 'PRE_EMI_STATUS_UPDATE',
-      applicationId,
-      preEmiStatus,
-      timestamp: Date.now()
-    });
-  }, [notify]);
+    // Subscribe to critical tables only with improved callback handling
+    const subscriptions = [
+      createSubscription('ptp_dates', () => {
+        onPtpDateUpdate?.();
+        // Don't trigger additional application updates for PTP changes
+        // as they cause month switching issues
+      }),
+      
+      createSubscription('audit_logs', () => {
+        onAuditLogUpdate?.();
+      }),
+      
+      createSubscription('applications', () => {
+        onApplicationUpdate?.();
+      }),
+      
+      createSubscription('calling_logs', () => {
+        onCallingLogUpdate?.();
+      }),
+      
+      createSubscription('contact_calling_status', () => {
+        onCallingLogUpdate?.();
+      }),
+      
+      createSubscription('comments', () => {
+        onCommentUpdate?.();
+      }),
 
-  const notifyPtpDateUpdate = useCallback((applicationId: string, ptpDate: string) => {
-    console.log('🔄 RealtimeUpdate: Notifying PTP date update:', { applicationId, ptpDate });
-    notify({
-      type: 'PTP_DATE_UPDATE',
-      applicationId,
-      ptpDate,
-      timestamp: Date.now()
-    });
-  }, [notify]);
+      // Add field_status subscription for status updates
+      createSubscription('field_status', () => {
+        onApplicationUpdate?.();
+      }),
 
-  const notifyAmountCollectedUpdate = useCallback((applicationId: string, amount: number) => {
-    console.log('🔄 RealtimeUpdate: Notifying amount collected update:', { applicationId, amount });
-    notify({
-      type: 'AMOUNT_COLLECTED_UPDATE',
-      applicationId,
-      amount,
-      timestamp: Date.now()
-    });
-  }, [notify]);
+      // Add collection subscription for amount updates
+      createSubscription('collection', () => {
+        onApplicationUpdate?.();
+      })
+    ];
 
-  const notifyCommentAdded = useCallback((applicationId: string, comment: any) => {
-    console.log('🔄 RealtimeUpdate: Notifying comment added:', { applicationId, comment });
-    notify({
-      type: 'COMMENT_ADDED',
-      applicationId,
-      comment,
-      timestamp: Date.now()
-    });
-  }, [notify]);
+    channelsRef.current = subscriptions;
 
-  const notifyContactStatusUpdate = useCallback((applicationId: string, contactType: string, status: string) => {
-    console.log('🔄 RealtimeUpdate: Notifying contact status update:', { applicationId, contactType, status });
-    notify({
-      type: 'CONTACT_STATUS_UPDATE',
-      applicationId,
-      contactType,
-      status,
-      timestamp: Date.now()
-    });
-  }, [notify]);
+    return () => {
+      console.log('🧹 Cleaning up optimized real-time subscriptions');
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Clear any pending timeouts
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      
+      subscriptions.forEach(channel => {
+        client.removeChannel(channel);
+      });
+      channelsRef.current = [];
+    };
+  }, [user, onApplicationUpdate, onCallingLogUpdate, onAuditLogUpdate, onCommentUpdate, onPtpDateUpdate]);
 
+  // Return current connection status
   return {
-    subscribe,
-    notify,
-    notifyApplicationUpdate,
-    notifyStatusUpdate,
-    notifyPreEmiStatusUpdate,
-    notifyPtpDateUpdate,
-    notifyAmountCollectedUpdate,
-    notifyCommentAdded,
-    notifyContactStatusUpdate
+    isActive: isActiveRef.current,
+    connectionCount: channelsRef.current.length
   };
 };
-
-export { RealtimeUpdateContext };

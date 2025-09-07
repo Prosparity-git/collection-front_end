@@ -2,32 +2,11 @@ import { memo, useEffect, useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Application } from "@/types/application";
 import { formatEmiMonth, formatCurrency, formatPtpDate } from "@/utils/formatters";
-
-// Mapping for demand_calling_status values to display labels
-const PRE_EMI_STATUS_MAPPING = {
-  "deposited in bank": "Deposited in Bank",
-  "cash collected": "Cash Collected", 
-  "ptp taken": "PTP Taken",
-  "no response": "No Response",
-  "no_response": "No Response",
-  "noresponse": "No Response",
-  "deposited_in_bank": "Deposited in Bank",
-  "cash_collected": "Cash Collected",
-  "ptp_taken": "PTP Taken",
-  "1": "Deposited in Bank",
-  "2": "Cash Collected",
-  "3": "PTP Taken", 
-  "4": "No Response"
-};
-
-const getPreEmiStatusLabel = (status: string | null | undefined) => {
-  if (!status) return 'Not Set';
-  return PRE_EMI_STATUS_MAPPING[status.toLowerCase()] || status;
-};
 import StatusBadge from "./StatusBadge";
 import ApplicationDetails from "./ApplicationDetails";
 import CallStatusDisplay from "../CallStatusDisplay";
 import CommentsDisplay from "./CommentsDisplay";
+import CallingStatusColumn from "./CallingStatusColumn";
 import type { BatchComment } from "@/hooks/useBatchComments";
 import type { BatchContactStatus } from "@/hooks/useBatchContactCallingStatus";
 import { CommentsService } from "@/integrations/api/services/commentsService";
@@ -148,18 +127,21 @@ const ApplicationRow = memo(({
         {batchedPtpDate ? formatPtpDate(batchedPtpDate) : (application.ptp_date ? formatPtpDate(application.ptp_date) : 'Not Set')}
       </TableCell>
 
-      {/* Pre-EMI Status */}
-      <TableCell className="py-4 align-top text-center w-[10%]">
-        <div className="text-blue-600 font-medium text-sm">
-          {getPreEmiStatusLabel(application.demand_calling_status)}
-        </div>
-      </TableCell>
-
-      {/* Amount Collected */}
-      <TableCell className="py-4 align-top text-center w-[10%]">
-        <div className="text-green-600 font-semibold text-base">
-          {application.amount_collected ? formatCurrency(application.amount_collected) : 'Not Collected'}
-        </div>
+      {/* Calling Status */}
+      <TableCell className="py-4 align-top w-[10%]">
+        <CallingStatusColumn
+          callingStatuses={batchedContactStatus ? {
+            applicant: batchedContactStatus.applicant || "Not Called",
+            co_applicant: batchedContactStatus.co_applicant || "Not Called",
+            guarantor: batchedContactStatus.guarantor || "Not Called",
+            reference: batchedContactStatus.reference || "Not Called"
+          } : {
+            applicant: application.applicant_calling_status || "Not Called",
+            co_applicant: application.co_applicant_calling_status || "Not Called",
+            guarantor: application.guarantor_calling_status || "Not Called",
+            reference: application.reference_calling_status || "Not Called"
+          }}
+        />
       </TableCell>
 
       {/* Recent Comments */}
