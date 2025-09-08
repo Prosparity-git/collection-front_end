@@ -13,6 +13,7 @@ import PendingApprovals from "@/components/PendingApprovals";
 import ApplicationDetailsPanel from "@/components/ApplicationDetailsPanel";
 import { getApplicationDetails, getApplicationsFromBackend, getFilterOptions, getCollectionsSummary, mapApiResponseToApplication } from '@/integrations/api/client';
 import { getCurrentEmiMonth, generateMonthOptions } from '@/utils/formatters';
+import { useRealtimeApplicationUpdates } from '@/hooks/useRealtimeApplicationUpdates';
 
 const PAGE_SIZE = 20;
 
@@ -27,7 +28,6 @@ const Index = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [allApplications, setAllApplications] = useState([]); // Store all fetched applications
   const [filterOptions, setFilterOptions] = useState(null);
   const [filters, setFilters] = useState({
     branch: [],
@@ -56,6 +56,19 @@ const Index = () => {
 
   // Check if user can view pending approvals (admin only)
   const canViewPendingApprovals = AuthService.canViewPendingApprovals();
+
+  // Initialize realtime updates
+  useRealtimeApplicationUpdates({
+    applications,
+    setApplications,
+    onApplicationUpdate: (applicationId, updates) => {
+      console.log('🔄 Index: Application updated via realtime:', { applicationId, updates });
+      // Update the selected application if it's the one being updated
+      if (selectedApplication && selectedApplication.applicant_id === applicationId) {
+        setSelectedApplication(prev => ({ ...prev, ...updates }));
+      }
+    }
+  });
 
   // Handle logout
   const handleLogout = async () => {
@@ -87,6 +100,8 @@ const Index = () => {
     console.log('🔄 useEffect triggered - selectedEmiMonth:', selectedEmiMonth);
     console.log('🔄 useEffect triggered - selectedEmiMonthRaw:', selectedEmiMonthRaw);
     console.log('🔄 useEffect triggered - filters changed:', filters);
+    console.log('🔄 useEffect triggered - currentPage:', currentPage);
+    console.log('🔄 useEffect triggered - searchTerm:', searchTerm);
     
     if (!selectedEmiMonth) {
       setApplications([]);
@@ -116,8 +131,10 @@ const Index = () => {
     console.log('📡 Fetching for EMI month:', selectedEmiMonth);
     console.log('📡 PTP Date filter:', filters.ptpDate);
     console.log('📡 Repayment filter:', filters.repayment);
+    console.log('📡 Pagination - Current page:', currentPage, 'Page size:', PAGE_SIZE, 'Offset:', offset);
+    console.log('🚀 Making API call to getApplicationsFromBackend...');
     
-    getApplicationsFromBackend(selectedEmiMonth, 0, 1000, filterParams) // Fetch all applications for frontend filtering
+    getApplicationsFromBackend(selectedEmiMonth, offset, PAGE_SIZE, filterParams) // Use proper pagination
       .then((data) => {
         console.log('✅ API response received:', data);
         console.log('✅ Results count:', data.results?.length || 0);
@@ -130,8 +147,7 @@ const Index = () => {
         console.log('✅ Mapped applications demand_num values:', mappedApplications.map(app => app.demand_num));
         console.log('✅ Mapped applications PTP dates:', mappedApplications.map(app => app.ptp_date));
         
-        setAllApplications(mappedApplications);
-        setApplications(mappedApplications); // Also update the current applications state
+        setApplications(mappedApplications); // Set current page applications
         setTotalCount(data.total || 0);
       })
       .catch((error) => {
@@ -223,36 +239,16 @@ const Index = () => {
     });
   }, []);
 
-  // Set applications when data is fetched (without resetting page)
+  // Reset page when filters change (server-side filtering handles the rest)
   useEffect(() => {
-    if (allApplications.length > 0) {
-      console.log('🔍 Setting applications from fetched data - count:', allApplications.length);
-      setApplications(allApplications);
-    }
-  }, [allApplications]);
-
-  // Apply filters whenever filters change
-  useEffect(() => {
-    if (allApplications.length > 0) {
-      console.log('🔍 Frontend filtering - allApplications count:', allApplications.length);
-      console.log('🔍 Frontend filtering - current filters:', filters);
-      console.log('🔍 Frontend filtering - repayment filter:', filters.repayment);
-      console.log('🔍 Frontend filtering - sample demand_num values:', allApplications.slice(0, 3).map(app => app.demand_num));
-      
-      // Since we're using backend filtering, just use the applications as-is
-      // The backend already filtered the data based on the parameters
-      setApplications(allApplications);
-      // Don't override totalCount here - keep the original from API
+    if (Object.values(filters).some(filterArray => filterArray.length > 0)) {
+      console.log('🔍 Filters changed, resetting to page 1');
       setCurrentPage(1); // Reset to first page when filters change
     }
   }, [filters]); // Only reset page when filters change, not when data is fetched
 
-  // Get paginated applications for current page
-  const paginatedApplications = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    return applications.slice(startIndex, endIndex);
-  }, [applications, currentPage, PAGE_SIZE]);
+  // Applications are already paginated from the server
+  const paginatedApplications = applications;
 
   // Handlers
   const handleEmiMonthChange = (month) => {
@@ -264,11 +260,10 @@ const Index = () => {
     
     // Force clear applications to ensure fresh data is fetched
     setApplications([]);
-    setAllApplications([]);
     setTotalCount(0);
   };
   const handleFilterChange = (key: string, values: string[]) => {
-    console.log('Filter change:', key, values);
+    console.log('🔧 handleFilterChange called with:', key, values);
     console.log('Filter change - key type:', typeof key);
     console.log('Filter change - values type:', typeof values);
     console.log('Filter change - values content:', values);
@@ -280,7 +275,6 @@ const Index = () => {
       console.log('🔄 Filter change requires fresh data fetch:', key);
       // Clear cached data to force fresh fetch
       setApplications([]);
-      setAllApplications([]);
       setTotalCount(0);
     }
     
@@ -295,10 +289,14 @@ const Index = () => {
       console.log('🔍 PTP Date filter change - will trigger fresh data fetch');
     }
     
-    setFilters(prev => ({
-      ...prev,
-      [key]: values
-    }));
+    setFilters(prev => {
+      const newFilters = {
+        ...prev,
+        [key]: values
+      };
+      console.log('🔧 Updated filters state:', newFilters);
+      return newFilters;
+    });
     setCurrentPage(1);
   };
   const handleApplicationSelect = (app) => setSelectedApplication(app);
@@ -424,6 +422,10 @@ const Index = () => {
               application={selectedApplication}
               onClose={handleApplicationClose}
               onSave={handleApplicationUpdated}
+              onDataChanged={() => {
+                console.log('🔄 Index: Data changed in ApplicationDetailsPanel');
+                // The realtime updates will handle refreshing the applications table
+              }}
               selectedEmiMonth={selectedEmiMonth}
             />
           </div>
