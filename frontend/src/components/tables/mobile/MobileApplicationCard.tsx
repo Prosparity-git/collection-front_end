@@ -235,8 +235,8 @@ const MobileApplicationCard = memo(({
         {/* Amount Collected */}
         <div className="mb-4">
           <p className="text-sm text-gray-600 mb-1">Amount Collected:</p>
-          <p className="text-sm font-semibold text-green-600">
-            {application.amount_collected ? formatCurrency(application.amount_collected) : 'Not Collected'}
+          <p className="text-sm font-semibold text-black">
+            {application.amount_collected ? formatCurrency(application.amount_collected) : 'NA'}
           </p>
         </div>
 
