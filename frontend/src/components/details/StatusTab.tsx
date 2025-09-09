@@ -105,11 +105,14 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   }, [currentStatus]);
 
   // Memoize the recent activity params to prevent infinite re-renders
-  const recentActivityParams = useMemo(() => ({
-    repayment_id: application.payment_id || undefined,
-    limit: 10,
-    days_back: 30
-  }), [application.payment_id]);
+  const recentActivityParams = useMemo(() => {
+    console.log('🔄 StatusTab: Updating recent activity params with repayment_id:', application.payment_id);
+    return {
+      repayment_id: application.payment_id || undefined,
+      limit: 50, // Match backend API default
+      days_back: 30
+    };
+  }, [application.payment_id]);
 
   // Recent activity hook - only fetch if we have a loan_id
   const { 
@@ -929,7 +932,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           onRefresh={refreshActivities}
           title="Recent Activity"
           showHeader={true}
-          maxItems={10}
+          maxItems={50}
         />
       )}
     </div>
