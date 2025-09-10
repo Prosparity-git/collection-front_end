@@ -100,6 +100,8 @@ const Index = () => {
     console.log('🔄 useEffect triggered - selectedEmiMonth:', selectedEmiMonth);
     console.log('🔄 useEffect triggered - selectedEmiMonthRaw:', selectedEmiMonthRaw);
     console.log('🔄 useEffect triggered - filters changed:', filters);
+    console.log('🔄 useEffect triggered - currentPage:', currentPage);
+    console.log('🔄 useEffect triggered - searchTerm:', searchTerm);
     
     if (!selectedEmiMonth) {
       setApplications([]);
@@ -130,6 +132,7 @@ const Index = () => {
     console.log('📡 PTP Date filter:', filters.ptpDate);
     console.log('📡 Repayment filter:', filters.repayment);
     console.log('📡 Pagination - Current page:', currentPage, 'Page size:', PAGE_SIZE, 'Offset:', offset);
+    console.log('🚀 Making API call to getApplicationsFromBackend...');
     
     getApplicationsFromBackend(selectedEmiMonth, offset, PAGE_SIZE, filterParams) // Use proper pagination
       .then((data) => {
@@ -260,7 +263,7 @@ const Index = () => {
     setTotalCount(0);
   };
   const handleFilterChange = (key: string, values: string[]) => {
-    console.log('Filter change:', key, values);
+    console.log('🔧 handleFilterChange called with:', key, values);
     console.log('Filter change - key type:', typeof key);
     console.log('Filter change - values type:', typeof values);
     console.log('Filter change - values content:', values);
@@ -272,7 +275,6 @@ const Index = () => {
       console.log('🔄 Filter change requires fresh data fetch:', key);
       // Clear cached data to force fresh fetch
       setApplications([]);
-      setAllApplications([]);
       setTotalCount(0);
     }
     
@@ -287,10 +289,14 @@ const Index = () => {
       console.log('🔍 PTP Date filter change - will trigger fresh data fetch');
     }
     
-    setFilters(prev => ({
-      ...prev,
-      [key]: values
-    }));
+    setFilters(prev => {
+      const newFilters = {
+        ...prev,
+        [key]: values
+      };
+      console.log('🔧 Updated filters state:', newFilters);
+      return newFilters;
+    });
     setCurrentPage(1);
   };
   const handleApplicationSelect = (app) => setSelectedApplication(app);
