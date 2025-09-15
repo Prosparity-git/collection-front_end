@@ -61,12 +61,15 @@ export class RecentActivityService {
     return data;
   }
 
-  // GET /api/v1/recent-activity/loan/{loan_id} - Get recent activity for a specific loan
+  // GET /api/v1/recent-activity/ - Get recent activity for a specific loan
   static async getLoanRecentActivity(
     loanId: number,
     params: Omit<RecentActivityParams, 'loan_id'> = {}
   ): Promise<RecentActivityResponse> {
     const queryParams = new URLSearchParams();
+    
+    // Add loan_id as query parameter (not in path)
+    queryParams.append('loan_id', loanId.toString());
     
     if (params.repayment_id) {
       queryParams.append('repayment_id', params.repayment_id.toString());
@@ -78,7 +81,10 @@ export class RecentActivityService {
       queryParams.append('days_back', params.days_back.toString());
     }
 
-    const url = `${API_BASE_URL}/recent-activity/loan/${loanId}?${queryParams.toString()}`;
+    const url = `${API_BASE_URL}/recent-activity/?${queryParams.toString()}`;
+    
+    console.log('🌐 RecentActivityService: Making API call to:', url);
+    console.log('🌐 RecentActivityService: Query parameters:', Object.fromEntries(queryParams.entries()));
     
     const response = await fetch(url, {
       method: 'GET',
@@ -87,12 +93,13 @@ export class RecentActivityService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('❌ Failed to fetch loan recent activity:', response.status, errorData);
+      console.error('❌ RecentActivityService: Failed to fetch loan recent activity:', response.status, errorData);
       throw new Error(`Failed to fetch loan recent activity: ${response.status} - ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
-    console.log('📥 Loan recent activity response:', data);
+    console.log('📥 RecentActivityService: Loan recent activity response:', data);
+    console.log('📥 RecentActivityService: Activities count:', data.activities?.length || 0);
     return data;
   }
 }

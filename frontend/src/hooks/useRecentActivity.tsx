@@ -66,6 +66,7 @@ export const useLoanRecentActivity = (
 
   const fetchActivities = useCallback(async () => {
     if (!loanId) {
+      console.log('🔄 useLoanRecentActivity: No loan ID, clearing activities');
       setActivities([]);
       setTotalCount(0);
       return;
@@ -75,16 +76,18 @@ export const useLoanRecentActivity = (
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching loan recent activity for loan ID:', loanId, 'with params:', params);
+      console.log('🔄 useLoanRecentActivity: Fetching loan recent activity for loan ID:', loanId, 'with params:', params);
+      console.log('🔄 useLoanRecentActivity: Repayment ID:', params.repayment_id);
       
       const response = await RecentActivityService.getLoanRecentActivity(loanId, params);
       
-      console.log('📥 Loan recent activity data received:', response);
+      console.log('📥 useLoanRecentActivity: Loan recent activity data received:', response);
+      console.log('📥 useLoanRecentActivity: Activities count:', response.activities?.length || 0);
       
       setActivities(response.activities || []);
       setTotalCount(response.total_count || 0);
     } catch (err) {
-      console.error('❌ Error fetching loan recent activity:', err);
+      console.error('❌ useLoanRecentActivity: Error fetching loan recent activity:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch loan recent activity');
       setActivities([]);
       setTotalCount(0);

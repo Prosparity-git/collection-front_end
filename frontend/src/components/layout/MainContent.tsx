@@ -38,11 +38,6 @@ const MainContent = ({
           <span>
             Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} applications
           </span>
-          {totalCount >= 1000 && (
-            <span className="text-amber-600 font-medium text-xs sm:text-sm">
-              Showing first 1,000 results
-          </span>
-          )}
         </div>
       )}
 
