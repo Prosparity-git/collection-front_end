@@ -2,7 +2,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatEmiMonth, getCurrentEmiMonth } from '@/utils/formatters';
 
 // Export the API base URL for use in services
-export const API_BASE_URL = "http://127.0.0.1:8000/api/v1"; 
+export const API_BASE_URL = "http://13.202.252.149:8000/api/v1"; 
 //export const API_BASE_URL = import.meta.env.VITE_API_URL + "/api/v1";
 
 
