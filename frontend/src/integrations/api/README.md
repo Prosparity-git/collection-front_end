@@ -217,7 +217,7 @@ interface FiltersOptionsResponse {
 
 ## 🚨 Important Notes
 
-1. **Base URL**: All services use `http://127.0.0.1:8000/api/v1` as the base URL
+1. **Base URL**: All services use `http://13.203.110.46:8000/api/v1` as the base URL
 2. **Error Handling**: Services throw errors that should be caught and handled appropriately
 3. **Backward Compatibility**: Legacy functions from `client.ts` are still available
 4. **Type Safety**: Full TypeScript support for all request/response data

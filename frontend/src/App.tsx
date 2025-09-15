@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { RealtimeUpdateContext, useRealtimeUpdateProvider } from "@/hooks/useRealtimeUpdates";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
@@ -32,17 +31,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Realtime Update Provider Component
-const RealtimeUpdateProvider = ({ children }: { children: React.ReactNode }) => {
-  const realtimeUpdateProvider = useRealtimeUpdateProvider();
-  
-  return (
-    <RealtimeUpdateContext.Provider value={realtimeUpdateProvider}>
-      {children}
-    </RealtimeUpdateContext.Provider>
-  );
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -50,28 +38,26 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <RealtimeUpdateProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin-settings" element={
-                <ProtectedRoute requireAdmin={true}>
-                  <AdminSettings />
-                </ProtectedRoute>
-              } />
-              <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <Analytics />
-                </ProtectedRoute>
-              } />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </RealtimeUpdateProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin-settings" element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminSettings />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            } />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

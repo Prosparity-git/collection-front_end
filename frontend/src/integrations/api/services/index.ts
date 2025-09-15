@@ -5,7 +5,6 @@ export * from './contactsService';
 export * from './filtersService';
 export * from './monthDropdownService';
 export * from './paidPendingService';
-export * from './recentActivityService';
 export * from './statusManagementService';
 export * from './summaryService';
 export * from './userService';

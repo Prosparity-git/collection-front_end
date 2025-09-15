@@ -157,8 +157,8 @@ const ApplicationRow = memo(({
 
       {/* Amount Collected */}
       <TableCell className="py-4 align-top text-center w-[10%]">
-        <div className="text-black font-semibold text-base">
-          {application.amount_collected ? formatCurrency(application.amount_collected) : 'NA'}
+        <div className="text-green-600 font-semibold text-base">
+          {application.amount_collected ? formatCurrency(application.amount_collected) : 'Not Collected'}
         </div>
       </TableCell>
 
