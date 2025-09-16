@@ -232,6 +232,14 @@ const MobileApplicationCard = memo(({
           </p>
         </div>
 
+        {/* Repayment Number */}
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 mb-1">Repayment Number:</p>
+          <p className="text-sm font-medium text-gray-800">
+            {application.demand_num || 'N/A'}
+          </p>
+        </div>
+
         {/* Amount Collected */}
         <div className="mb-4">
           <p className="text-sm text-gray-600 mb-1">Amount Collected:</p>

@@ -45,7 +45,13 @@ const FilterBar = ({
   // Apply temporary filters when Done is clicked
   const handleApplyFilters = () => {
     Object.keys(tempFilters).forEach(key => {
-      onFilterChange(key, tempFilters[key] || []);
+      const currentValue = filters[key] || [];
+      const newValue = tempFilters[key] || [];
+      
+      // Only call onFilterChange if the values have actually changed
+      if (JSON.stringify(currentValue.sort()) !== JSON.stringify(newValue.sort())) {
+        onFilterChange(key, newValue);
+      }
     });
     setIsOpen(false);
   };

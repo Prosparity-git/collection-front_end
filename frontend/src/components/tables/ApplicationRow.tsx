@@ -155,6 +155,13 @@ const ApplicationRow = memo(({
         </div>
       </TableCell>
 
+      {/* Repayment Number */}
+      <TableCell className="py-4 align-top text-center w-[10%]">
+        <div className="text-gray-800 font-medium text-sm">
+          {application.demand_num || 'N/A'}
+        </div>
+      </TableCell>
+
       {/* Amount Collected */}
       <TableCell className="py-4 align-top text-center w-[10%]">
         <div className="text-black font-semibold text-base">

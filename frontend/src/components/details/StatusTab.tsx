@@ -41,8 +41,8 @@ const REPAYMENT_STATUS_OPTIONS = [
   { value: "2", label: "Partially Paid" },
   { value: "5", label: "Foreclose" },
   { value: "6", label: "Paid (Pending Approval)" },
-  // { value: "3", label: "Paid" },
-  // { value: "7", label: "Paid Rejected" }
+  { value: "3", label: "Paid" },
+  { value: "7", label: "Paid Rejected" }
 ];
 
 // Map backend status values to frontend dropdown values
@@ -99,9 +99,25 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Check if status is "Paid" to disable demand and repayment status fields
+  // Check if status is "Paid" or "Paid Rejected" to disable demand and repayment status fields
   const isStatusPaid = useMemo(() => {
-    return currentStatus === '3' || currentStatus === 'Paid';
+    return currentStatus === '3' || currentStatus === 'Paid' || 
+           currentStatus === '7' || currentStatus === 'Paid Rejected';
+  }, [currentStatus]);
+
+  // Set form data based on current status when status changes
+  useEffect(() => {
+    console.log('🔄 StatusTab: Setting form data based on current status:', currentStatus);
+    
+    if (currentStatus && currentStatus !== 'Not Set') {
+      const mappedValue = mapBackendStatusToDropdownValue(currentStatus);
+      console.log('🔄 StatusTab: Mapped status to dropdown value:', { currentStatus, mappedValue });
+      
+      setFormData(prev => ({
+        ...prev,
+        repaymentStatus: mappedValue
+      }));
+    }
   }, [currentStatus]);
 
   // Memoize the recent activity params to prevent infinite re-renders
@@ -786,7 +802,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
               </Select>
               {isStatusPaid && (
                 <div className="text-xs text-amber-600 mt-1">
-                  Repayment status cannot be changed when current status is "Paid"
+                  Repayment status cannot be changed when current status is "Paid" or "Paid Rejected"
                 </div>
               )}
             </div>
