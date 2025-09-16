@@ -1,17 +1,14 @@
-# dependencies
+
 /node_modules
+/frontend/node_modules
 
-# production build
-/dist
-
-# Vite cache
+# Vite cache & build
 /.vite
-vite.config.ts.timestamp-*
+/frontend/node_modules/.vite
+dist
+/frontend/dist
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# macOS system files
+# OS / editor
 .DS_Store
+.env
+.vscode
