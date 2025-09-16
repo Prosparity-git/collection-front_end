@@ -7,15 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Comment } from "@/hooks/useComments";
 import { format } from "date-fns";
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 
 interface CommentsTabProps {
   comments: Comment[];
   onAddComment: (content: string, paymentId?: number) => void;
   paymentId?: number; // Add payment_id prop
+  applicationId?: string; // Add applicationId prop for realtime updates
 }
 
-const CommentsTab = ({ comments, onAddComment, paymentId }: CommentsTabProps) => {
+const CommentsTab = ({ comments, onAddComment, paymentId, applicationId }: CommentsTabProps) => {
   const [newComment, setNewComment] = useState("");
+  const { notifyCommentAdded } = useRealtimeUpdates();
 
   const formatDateTime = (dateStr: string) => {
     try {
@@ -31,6 +34,16 @@ const CommentsTab = ({ comments, onAddComment, paymentId }: CommentsTabProps) =>
       console.log('🔍 CommentsTab: Adding comment with paymentId:', paymentId);
       // Pass paymentId to onAddComment if available
       await onAddComment(newComment, paymentId);
+      
+      // Notify realtime updates
+      if (applicationId) {
+        notifyCommentAdded(applicationId, {
+          content: newComment.trim(),
+          paymentId,
+          timestamp: Date.now()
+        });
+      }
+      
       setNewComment("");
     }
   };

@@ -746,6 +746,7 @@ const ApplicationDetailsPanel = ({
                 comments={comments}
                 onAddComment={handleAddComment}
                 paymentId={currentApplication.payment_id}
+                applicationId={currentApplication.applicant_id}
               />
             </TabsContent>
             <TabsContent value="details" className="m-0">

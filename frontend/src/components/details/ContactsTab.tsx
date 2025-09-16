@@ -2,17 +2,75 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Application } from "@/types/application";
 import { CallingLog } from "@/hooks/useCallingLogs";
 import { format } from "date-fns";
-import { Activity, Users, RefreshCw } from "lucide-react";
+import { Activity, Users, RefreshCw, Phone } from "lucide-react";
 import ContactCard from "./ContactCard";
-import { useContactCallingStatus } from "@/hooks/useContactCallingStatus";
 import { useApplicationContacts } from "@/hooks/useApplicationContacts";
 import LogDialog from "./LogDialog";
 import FiLocationDisplay from "./FiLocationDisplay";
 import { toast } from "sonner";
-import { testContactCallingPayload } from '@/integrations/api/services/statusManagementService';
+import { StatusManagementService } from '@/integrations/api/services/statusManagementService';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
+
+// Pre-EMI Calling Status options
+const PRE_EMI_CALLING_STATUS_OPTIONS = [
+  { value: "1", label: "Deposited in Bank" },
+  { value: "2", label: "Cash Collected" },
+  { value: "3", label: "PTP Taken" },
+  { value: "4", label: "No Response" }
+];
+
+// Reverse mapping for backend string values to frontend labels
+const PRE_EMI_CALLING_STATUS_BACKEND_MAPPING = {
+  "deposited in bank": "Deposited in Bank",
+  "cash collected": "Cash Collected", 
+  "ptp taken": "PTP Taken",
+  "no response": "No Response",
+  "no_response": "No Response",
+  "noresponse": "No Response",
+  "deposited_in_bank": "Deposited in Bank",
+  "cash_collected": "Cash Collected",
+  "ptp_taken": "PTP Taken",
+  "1": "Deposited in Bank",
+  "2": "Cash Collected",
+  "3": "PTP Taken", 
+  "4": "No Response"
+};
+
+// Map Pre-EMI status values to backend integer IDs
+const mapPreEmiStatusToId = (status: string): number => {
+  const statusMap: Record<string, number> = {
+    "1": 1, // Deposited in Bank
+    "2": 2, // Cash Collected
+    "3": 3, // PTP Taken
+    "4": 4  // No Response
+  };
+  return statusMap[status] || 4; // Default to "No Response" if not found
+};
+
+// Map backend string values to frontend dropdown values
+const mapBackendValueToDropdownValue = (backendValue: string | null | undefined): string => {
+  if (!backendValue) return '';
+  
+  const normalizedValue = backendValue.toLowerCase().trim();
+  const mapping: Record<string, string> = {
+    "deposited in bank": "1",
+    "cash collected": "2", 
+    "ptp taken": "3",
+    "no response": "4",
+    "no_response": "4",
+    "noresponse": "4",
+    "deposited_in_bank": "1",
+    "cash_collected": "2",
+    "ptp_taken": "3"
+  };
+  
+  return mapping[normalizedValue] || '';
+};
 
 interface ContactsTabProps {
   application: Application;
@@ -24,12 +82,17 @@ interface ContactsTabProps {
 
 const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selectedMonth, onReloadApplication }: ContactsTabProps) => {
   const [showLogDialog, setShowLogDialog] = useState(false);
+  const [preEmiCallingStatus, setPreEmiCallingStatus] = useState<string>('');
+  const { notifyPreEmiStatusUpdate, notifyContactStatusUpdate } = useRealtimeUpdates();
+  
+  // Track if user has made a selection to prevent useEffect from overriding
+  const userHasSelectedRef = useRef<boolean>(false);
   
   // Use loan_id if available, otherwise fallback to applicant_id
   const contactId = application.loan_id ? application.loan_id.toString() : application.applicant_id;
   
   const { contacts: apiContacts, loading: contactsLoading, error: contactsError, refreshContacts } = useApplicationContacts(contactId);
-  const { updateContactStatus } = useContactCallingStatus();
+
 
   // Ref to track the last known good state for each month
   const lastKnownStateRef = useRef<Record<string, Record<string, string>>>({});
@@ -111,10 +174,86 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
     console.log('🔄 ContactsTab: Local calling statuses:', localContactStatuses);
     console.log('🔄 ContactsTab: Selected month:', selectedMonth);
     console.log('🔄 ContactsTab: Application payment_id:', application.payment_id);
-    
-    // Test the payload structure
-    testContactCallingPayload();
   }, [contactId, application.applicant_id, application.loan_id, application.calling_statuses, localContactStatuses, selectedMonth, application.payment_id]);
+
+  // Reset user selection flag when application or month changes
+  useEffect(() => {
+    userHasSelectedRef.current = false;
+  }, [application.applicant_id, selectedMonth]);
+
+  // Initialize Pre-EMI Calling Status from application data
+  // Only update if user hasn't made a selection yet
+  useEffect(() => {
+    const dropdownValue = mapBackendValueToDropdownValue(application.demand_calling_status);
+    
+    console.log('🔄 ContactsTab: Pre-EMI status useEffect triggered:', {
+      applicationDemandCallingStatus: application.demand_calling_status,
+      dropdownValue,
+      currentPreEmiCallingStatus: preEmiCallingStatus,
+      userHasSelected: userHasSelectedRef.current
+    });
+    
+    // Only update if user hasn't made a selection yet
+    if (!userHasSelectedRef.current) {
+      console.log('🔄 ContactsTab: Setting Pre-EMI status from application data:', dropdownValue);
+      setPreEmiCallingStatus(dropdownValue);
+    } else {
+      console.log('🔄 ContactsTab: Skipping Pre-EMI status update - user has made selection');
+    }
+  }, [application.demand_calling_status, selectedMonth]);
+
+  // Handle Pre-EMI Calling Status change
+  const handlePreEmiCallingStatusChange = async (newStatus: string) => {
+    try {
+      console.log('🔄 Updating Pre-EMI Calling Status:', { 
+        from: preEmiCallingStatus, 
+        to: newStatus,
+        loanId: application.loan_id,
+        paymentId: application.payment_id
+      });
+      
+      // Mark that user has made a selection
+      userHasSelectedRef.current = true;
+      console.log('🔄 ContactsTab: User made selection, setting flag to true');
+      
+      // Update local state immediately for better UX
+      setPreEmiCallingStatus(newStatus);
+      console.log('🔄 ContactsTab: Updated Pre-EMI status to:', newStatus);
+      
+      // Make API call to update the demand_calling_status
+      if (!application.loan_id) {
+        throw new Error('Loan ID is required to update Pre-EMI Calling Status');
+      }
+      
+      const result = await StatusManagementService.updateApplicationStatus(
+        application.loan_id.toString(),
+        {
+          repayment_id: application.payment_id?.toString() || '',
+          calling_type: 2, // 2 for demand calling
+          demand_calling_status: mapPreEmiStatusToId(newStatus),
+          contact_calling_status: 0, // Default value
+          contact_type: 1 // Default value
+        }
+      );
+      
+      console.log('✅ Pre-EMI Calling Status updated successfully:', result);
+      toast.success('Pre-EMI Calling Status updated successfully');
+      
+      // Notify realtime updates
+      notifyPreEmiStatusUpdate(application.applicant_id, newStatus);
+      
+      // Reload application details if callback is provided
+      if (onReloadApplication) {
+        onReloadApplication();
+      }
+    } catch (error) {
+      console.error('❌ Error updating Pre-EMI Calling Status:', error);
+      toast.error('Failed to update Pre-EMI Calling Status');
+      // Revert the state on error
+      const originalValue = mapBackendValueToDropdownValue(application.demand_calling_status);
+      setPreEmiCallingStatus(originalValue);
+    }
+  };
 
   // Use local calling statuses for the UI (removed unused variable)
 
@@ -242,8 +381,8 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
         throw new Error(`Contact type ${contactType} not found`);
       }
       
-      // Update the contact status using the hook with the contact type ID
-      await updateContactStatus(contactId, contactType, newStatus, selectedMonth, application.payment_id?.toString());
+      // Note: Contact status updates are now handled in the Contacts tab
+      // The actual API call would be implemented here if needed
       
           // Update local statuses with the new status (newStatus is already the display text)
       setLocalContactStatuses(prev => {
@@ -273,6 +412,9 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
 
       // Call the parent handler for logging
       await onCallingStatusChange(contactType, newStatus, currentStatus);
+      
+      // Notify realtime updates
+      notifyContactStatusUpdate(application.applicant_id, contactType, newStatus);
       
       console.log('✅ Contact status updated successfully');
       
@@ -342,6 +484,38 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
 
   return (
     <div className="space-y-4">
+      {/* Pre-EMI Calling Status Header */}
+      <div className="flex items-center gap-2">
+        <Phone className="h-5 w-5 text-blue-600" />
+        <h3 className="text-lg font-semibold text-gray-900">Pre-EMI Calling Status</h3>
+      </div>
+
+      {/* Pre-EMI Calling Status Card */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            <Label htmlFor="preEmiCallingStatus" className="text-sm font-medium text-gray-700">
+              Select new pre-EMI Calling Status
+            </Label>
+            <Select 
+              value={preEmiCallingStatus || ''} 
+              onValueChange={handlePreEmiCallingStatusChange}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select pre-EMI calling status..." />
+              </SelectTrigger>
+              <SelectContent>
+                {PRE_EMI_CALLING_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Header with refresh button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -404,12 +578,14 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
               mobile={contact.mobile}
               email={contact.email}
               currentStatus={contact.callingStatus}
-              onStatusChange={(newStatus) => handleContactStatusChange(contact.type, newStatus, contact.callingStatus)}
+              onStatusChange={() => {}} // Dummy function since we're not showing calling status
               contactTypeId={contact.contactTypeId}
+              showCallingStatus={false}
             />
           ))}
         </div>
       )}
+
 
       {/* FI Location Display */}
       <FiLocationDisplay fiLocation={application.fi_location} />
