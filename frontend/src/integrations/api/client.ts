@@ -108,6 +108,9 @@ interface ApiApplicationItem {
   disbursement_date?: string;
   house_ownership?: string;
   demand_calling_status?: string;
+  latitude?: number; // Latitude coordinate from API response
+  longitude?: number; // Longitude coordinate from API response
+  address?: string; // Address from API response
 }
 
 interface ApiFilteredResponse {
@@ -176,7 +179,10 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     payment_mode: apiItem.payment_mode || '',
     calling_statuses: apiItem.calling_statuses || {},
     house_ownership: apiItem.house_ownership || '',
-    demand_calling_status: apiItem.demand_calling_status || ''
+    demand_calling_status: apiItem.demand_calling_status || '',
+    latitude: apiItem.latitude,
+    longitude: apiItem.longitude,
+    address: apiItem.address
   };
 }
 

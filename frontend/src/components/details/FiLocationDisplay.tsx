@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 interface FiLocationDisplayProps {
-  fiLocation: string | null;
+  fiLocation?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
-const FiLocationDisplay = ({ fiLocation }: FiLocationDisplayProps) => {
+const FiLocationDisplay = ({ fiLocation, latitude, longitude }: FiLocationDisplayProps) => {
   // Parse FI location to extract coordinates
   const parseLocation = (location: string | null) => {
     if (!location || location.trim() === '') {
@@ -32,7 +34,21 @@ const FiLocationDisplay = ({ fiLocation }: FiLocationDisplayProps) => {
     return null;
   };
 
-  const coordinates = parseLocation(fiLocation);
+  // Get coordinates from either direct props or parsed fiLocation
+  const getCoordinates = () => {
+    // First try to use direct latitude/longitude props
+    if (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) {
+      // Validate coordinates
+      if (!isNaN(latitude) && !isNaN(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
+        return { lat: latitude, lng: longitude };
+      }
+    }
+    
+    // Fallback to parsing fiLocation
+    return parseLocation(fiLocation);
+  };
+
+  const coordinates = getCoordinates();
 
   if (!coordinates) {
     return null;

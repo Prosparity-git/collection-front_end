@@ -315,21 +315,6 @@ const Index = () => {
     setCurrentPage(1); // Reset to first page when searching
   };
 
-  // Export handlers
-  const handleExportFull = () => {
-    // TODO: Implement full export functionality
-    console.log('Export full requested');
-  };
-
-  const handleExportPtpComments = () => {
-    // TODO: Implement PTP comments export functionality
-    console.log('Export PTP comments requested');
-  };
-
-  const handleExportPlanVsAchievement = (plannedDateTime: Date) => {
-    // TODO: Implement plan vs achievement export functionality
-    console.log('Export plan vs achievement requested for:', plannedDateTime);
-  };
 
   // Map backend filter keys to frontend keys
   const mappedOptions = filterOptions && {
@@ -371,9 +356,6 @@ const Index = () => {
       <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-4 md:py-6 lg:py-8">
         <div className="space-y-2 sm:space-y-4 md:space-y-6">
           <AppHeader 
-            onExportFull={handleExportFull}
-            onExportPtpComments={handleExportPtpComments}
-            onExportPlanVsAchievement={handleExportPlanVsAchievement}
             onLogout={handleLogout}
             user={user}
           />

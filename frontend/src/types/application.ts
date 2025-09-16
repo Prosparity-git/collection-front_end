@@ -65,6 +65,9 @@ export interface Application {
     guarantor?: string;
     reference?: string;
   };
+  latitude?: number; // Latitude coordinate from API response
+  longitude?: number; // Longitude coordinate from API response
+  address?: string; // Address from API response
 }
 
 export interface AuditLog {

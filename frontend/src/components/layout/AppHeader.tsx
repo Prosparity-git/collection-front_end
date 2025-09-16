@@ -4,18 +4,15 @@ import { LogOut, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthService } from "@/integrations/api/services/authService";
-import ExportDialog from "@/components/ExportDialog";
+import CollectionExportDialog from "@/components/CollectionExportDialog";
 import { BarChart3 } from "lucide-react";
 
 interface AppHeaderProps {
-  onExportFull: () => void;
-  onExportPtpComments: () => void;
-  onExportPlanVsAchievement: (plannedDateTime: Date) => void;
   onLogout: () => void;
   user: any;
 }
 
-const AppHeader = ({ onExportFull, onExportPtpComments, onExportPlanVsAchievement, onLogout, user }: AppHeaderProps) => {
+const AppHeader = ({ onLogout, user }: AppHeaderProps) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
@@ -58,11 +55,7 @@ const AppHeader = ({ onExportFull, onExportPtpComments, onExportPlanVsAchievemen
               <BarChart3 className="h-3 w-3 mr-1" />
               Analytics
             </Button>
-            <ExportDialog 
-              onExportFull={onExportFull}
-              onExportPtpComments={onExportPtpComments}
-              onExportPlanVsAchievement={onExportPlanVsAchievement}
-            />
+            <CollectionExportDialog />
             {isAdmin && (
               <Button
                 variant="outline"

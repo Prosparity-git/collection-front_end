@@ -588,7 +588,11 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
 
 
       {/* FI Location Display */}
-      <FiLocationDisplay fiLocation={application.fi_location} />
+      <FiLocationDisplay 
+        fiLocation={application.fi_location} 
+        latitude={application.latitude}
+        longitude={application.longitude}
+      />
 
       {/* Recent Call Activity - Hidden as requested */}
       {/* <Card>
