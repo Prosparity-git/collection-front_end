@@ -6,9 +6,10 @@ interface FiLocationDisplayProps {
   fiLocation?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  address?: string | null;
 }
 
-const FiLocationDisplay = ({ fiLocation, latitude, longitude }: FiLocationDisplayProps) => {
+const FiLocationDisplay = ({ fiLocation, latitude, longitude, address }: FiLocationDisplayProps) => {
   // Parse FI location to extract coordinates
   const parseLocation = (location: string | null) => {
     if (!location || location.trim() === '') {
@@ -73,6 +74,17 @@ const FiLocationDisplay = ({ fiLocation, latitude, longitude }: FiLocationDispla
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-3">
+          {/* Address Section */}
+          {address && (
+            <div>
+              <p className="text-sm font-medium text-gray-700">Address</p>
+              <p className="text-xs text-gray-600">
+                {address}
+              </p>
+            </div>
+          )}
+          
+          {/* Coordinates Section */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-700">Coordinates</p>
