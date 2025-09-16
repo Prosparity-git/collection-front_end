@@ -4,7 +4,7 @@ This document outlines all the backend API endpoints and their corresponding fro
 
 ## Base URL
 ```
-http://13.202.252.149:8000/api/v1
+http://127.0.0.1:8000/api/v1
 ```
 
 ## 1. Applications API (`/applications`)
