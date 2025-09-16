@@ -9,8 +9,7 @@ const OptimizedTableHeader = () => {
         <TableHead className="font-bold text-slate-800 text-center py-4 px-4 whitespace-nowrap">EMI Amount</TableHead>
         <TableHead className="font-bold text-slate-800 text-center py-4 px-4 whitespace-nowrap">Status</TableHead>
         <TableHead className="font-bold text-slate-800 text-center py-4 px-4 whitespace-nowrap">PTP Date</TableHead>
-        <TableHead className="font-bold text-slate-800 text-center py-4 px-4 whitespace-nowrap">Pre-EMI</TableHead>
-        <TableHead className="font-bold text-slate-800 text-center py-4 px-4 whitespace-nowrap">Amount Collected</TableHead>
+        <TableHead className="font-bold text-slate-800 text-center py-4 px-4 whitespace-nowrap">Calling Status</TableHead>
         <TableHead className="font-bold text-slate-800 py-4 px-4 whitespace-nowrap">Recent Comments</TableHead>
       </TableRow>
     </TableHeader>

@@ -22,7 +22,7 @@ const ContactCard = ({
   email, 
   currentStatus, 
   onStatusChange,
-  showCallingStatus = false 
+  showCallingStatus = true 
 }: ContactCardProps) => {
   // Debug logging to track status changes
   console.log(`🔄 ContactCard (${title}): Rendering with currentStatus:`, currentStatus);
