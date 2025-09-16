@@ -594,7 +594,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
 
     // Check if form has any data to submit
     const hasFormData = formData.repaymentStatus || 
-                       formData.ptpDate || 
+                       (formData.ptpDate && formData.ptpDate !== '' && formData.ptpDate !== 'clear') || 
+                       formData.ptpDate === 'clear' ||
                        (formData.amountCollected !== undefined && formData.amountCollected !== '' && formData.amountCollected !== '0');
 
     if (!hasFormData) {
@@ -625,7 +626,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         repayment_id: repaymentId,
         calling_type: 2, // 2 for demand calling
         repayment_status: formData.repaymentStatus ? parseInt(formData.repaymentStatus, 10) : undefined,
-        ptp_date: formData.ptpDate || undefined,
+        ptp_date: formData.ptpDate === 'clear' ? 'clear' : (formData.ptpDate || undefined),
         amount_collected: formData.amountCollected ? parseFloat(formData.amountCollected) : undefined,
         contact_calling_status: 0, // Default value as per API schema
         contact_type: 1 // Default value as per API schema
@@ -660,10 +661,17 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         notifyStatusUpdate(application.applicant_id, statusLabel);
       }
       if (formData.ptpDate) {
-        setPtpDate(formData.ptpDate);
-        onPtpDateChange(formData.ptpDate);
-        // Notify realtime updates
-        notifyPtpDateUpdate(application.applicant_id, formData.ptpDate);
+        if (formData.ptpDate === 'clear') {
+          setPtpDate('');
+          onPtpDateChange('');
+          // Notify realtime updates with cleared value
+          notifyPtpDateUpdate(application.applicant_id, '');
+        } else {
+          setPtpDate(formData.ptpDate);
+          onPtpDateChange(formData.ptpDate);
+          // Notify realtime updates
+          notifyPtpDateUpdate(application.applicant_id, formData.ptpDate);
+        }
       }
       if (formData.amountCollected !== undefined) {
         setAmountCollected(formData.amountCollected);
@@ -692,7 +700,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           application.applicant_id,
           'PTP Date',
           ptpDate || null,
-          formData.ptpDate,
+          formData.ptpDate === 'clear' ? 'Cleared' : formData.ptpDate,
           '' // Empty string since month is now linked via repayment_id
         );
       }
@@ -810,18 +818,30 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
             {/* PTP DATE INPUT */}
             <div>
               <Label htmlFor="ptpDate">PTP Date</Label>
-              <Input
-                key={`ptp-${formData.ptpDate}`} // Force re-render when value changes
-                id="ptpDate"
-                type="date"
-                value={formData.ptpDate || ''} // Ensure value is never undefined
-                onChange={(e) => handleFormFieldChange('ptpDate', e.target.value)}
-                className="mt-1"
-                placeholder={application.ptp_date ? "Select PTP date" : "No PTP date set - select a date"}
-                disabled={isStatusPaid}
-              />
+              <div className="flex gap-2 mt-1">
+                <Input
+                  key={`ptp-${formData.ptpDate}`} // Force re-render when value changes
+                  id="ptpDate"
+                  type="date"
+                  value={formData.ptpDate || ''} // Ensure value is never undefined
+                  onChange={(e) => handleFormFieldChange('ptpDate', e.target.value)}
+                  className="flex-1"
+                  placeholder={application.ptp_date ? "Select PTP date" : "No PTP date set - select a date"}
+                  disabled={isStatusPaid}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleFormFieldChange('ptpDate', 'clear')}
+                  disabled={isStatusPaid}
+                  className="px-3"
+                >
+                  Clear
+                </Button>
+              </div>
               {!application.ptp_date && !isStatusPaid && (
-                <div className="text-xs text-gray-500">No PTP date set - enter a date above</div>
+                <div className="text-xs text-gray-500">No PTP date set - enter a date above or click Clear</div>
               )}
               {isStatusPaid && (
                 <div className="text-xs text-amber-600 mt-1">
