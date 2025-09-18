@@ -25,5 +25,3 @@ npm run preview
 - React
 - shadcn-ui
 - Tailwind CSS
-
-- 
