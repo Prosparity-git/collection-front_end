@@ -9,27 +9,6 @@ import { CommentsService } from "@/integrations/api/services/commentsService";
 import { COMMENT_TYPES } from "@/integrations/api/services/commentsService";
 import CallButton from "../../CallButton";
 
-// Mapping for demand_calling_status values to display labels
-const PRE_EMI_STATUS_MAPPING = {
-  "deposited in bank": "Deposited in Bank",
-  "cash collected": "Cash Collected", 
-  "ptp taken": "PTP Taken",
-  "no response": "No Response",
-  "no_response": "No Response",
-  "noresponse": "No Response",
-  "deposited_in_bank": "Deposited in Bank",
-  "cash_collected": "Cash Collected",
-  "ptp_taken": "PTP Taken",
-  "1": "Deposited in Bank",
-  "2": "Cash Collected",
-  "3": "PTP Taken", 
-  "4": "No Response"
-};
-
-const getPreEmiStatusLabel = (status: string | null | undefined) => {
-  if (!status) return 'Not Set';
-  return PRE_EMI_STATUS_MAPPING[status.toLowerCase()] || status;
-};
 
 interface MobileApplicationCardProps {
   application: Application;
@@ -154,15 +133,15 @@ const MobileApplicationCard = memo(({
               <CallButton 
                 name="Call" 
                 phone={application.applicant_mobile}
-                variant="outline"
+                variant="default"
                 size="sm"
-                className="flex-shrink-0"
+                className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white border-0"
               />
             ) : (
               <Button
-                variant="outline"
+                variant="default"
                 size="sm"
-                className="flex-shrink-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white border-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   console.log('No mobile number available for:', application.applicant_name);
@@ -184,31 +163,42 @@ const MobileApplicationCard = memo(({
         </div>
 
 
-        {/* Lender and RM Details */}
+        {/* Application Details */}
         <div className="mb-4">
-          <div className="flex justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Building className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Lender:</span>
-                <span className="text-sm font-medium">{application.lender_name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Dealer:</span>
-                <span className="text-sm font-medium">{application.dealer_name}</span>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Dealer */}
+            <div className="flex items-start gap-2">
+              <Building className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">Dealer:</div>
+                <div className="text-sm font-medium break-words">{application.dealer_name}</div>
               </div>
             </div>
-            <div className="flex-1 text-right">
-              <div className="flex items-center justify-end gap-2 mb-1">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">RM:</span>
-                <span className="text-sm font-medium">{application.rm_name}</span>
+            
+            {/* RM */}
+            <div className="flex items-start gap-2">
+              <User className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">RM:</div>
+                <div className="text-sm font-medium break-words">{application.rm_name}</div>
               </div>
-              <div className="flex items-center justify-end gap-2">
-                <Building className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Branch:</span>
-                <span className="text-sm font-medium">{application.branch_name}</span>
+            </div>
+            
+            {/* Repayment Number */}
+            <div className="flex items-start gap-2">
+              <div className="h-4 w-4 flex-shrink-0 mt-0.5"></div>
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">Repayment Number:</div>
+                <div className="text-sm font-medium">{application.demand_num || 'N/A'}</div>
+              </div>
+            </div>
+            
+            {/* Branch */}
+            <div className="flex items-start gap-2">
+              <Building className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">Branch:</div>
+                <div className="text-sm font-medium break-words">{application.branch_name}</div>
               </div>
             </div>
           </div>
@@ -224,13 +214,6 @@ const MobileApplicationCard = memo(({
           </div>
         </div>
 
-        {/* Pre-EMI Status */}
-        <div className="mb-4">
-          <p className="text-sm text-gray-600 mb-1">Pre-EMI:</p>
-          <p className="text-sm font-medium text-blue-600">
-            {getPreEmiStatusLabel(application.demand_calling_status)}
-          </p>
-        </div>
 
         {/* Amount Collected */}
         <div className="mb-4">

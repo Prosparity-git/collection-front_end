@@ -3,27 +3,6 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Application } from "@/types/application";
 import { formatEmiMonth, formatCurrency, formatPtpDate } from "@/utils/formatters";
 
-// Mapping for demand_calling_status values to display labels
-const PRE_EMI_STATUS_MAPPING = {
-  "deposited in bank": "Deposited in Bank",
-  "cash collected": "Cash Collected", 
-  "ptp taken": "PTP Taken",
-  "no response": "No Response",
-  "no_response": "No Response",
-  "noresponse": "No Response",
-  "deposited_in_bank": "Deposited in Bank",
-  "cash_collected": "Cash Collected",
-  "ptp_taken": "PTP Taken",
-  "1": "Deposited in Bank",
-  "2": "Cash Collected",
-  "3": "PTP Taken", 
-  "4": "No Response"
-};
-
-const getPreEmiStatusLabel = (status: string | null | undefined) => {
-  if (!status) return 'Not Set';
-  return PRE_EMI_STATUS_MAPPING[status.toLowerCase()] || status;
-};
 import StatusBadge from "./StatusBadge";
 import ApplicationDetails from "./ApplicationDetails";
 import CallStatusDisplay from "../CallStatusDisplay";
@@ -125,35 +104,29 @@ const ApplicationRow = memo(({
           <span className="font-bold text-blue-800">{application.applicant_name}</span>
           <span className="text-xs text-gray-700">ID: {application.applicant_id}</span>
           <span className="text-xs text-gray-700">EMI Month: {formatEmiMonth(selectedEmiMonth ? selectedEmiMonth : application.emi_month)}</span>
+          <span className="text-xs text-gray-700">Repayment Number: {application.demand_num || 'N/A'}</span>
           <span className="text-xs text-gray-700">Branch: {application.branch_name}</span>
           <span className="text-xs text-gray-700">TL: {application.team_lead}</span>
           <span className="text-xs text-gray-700">RM: {application.rm_name}</span>
           <span className="text-xs text-gray-700">Dealer: {application.dealer_name}</span>
-          <span className="text-xs text-gray-700">Lender: {application.lender_name}</span>
         </div>
       </TableCell>
 
       {/* EMI Amount */}
-      <TableCell className="py-4 align-top text-blue-600 font-semibold text-base w-[10%]">
+      <TableCell className="py-4 align-top text-center text-blue-600 font-semibold text-base w-[10%]">
         {formatCurrency(application.emi_amount)}
       </TableCell>
 
       {/* Status */}
-      <TableCell className="py-4 align-top w-[10%]">
+      <TableCell className="py-4 align-top text-center w-[10%]">
         <StatusBadge status={application.status} />
       </TableCell>
 
       {/* PTP Date */}
-      <TableCell className="py-4 align-top w-[10%]">
+      <TableCell className="py-4 align-top text-center w-[10%]">
         {batchedPtpDate ? formatPtpDate(batchedPtpDate) : (application.ptp_date ? formatPtpDate(application.ptp_date) : 'Not Set')}
       </TableCell>
 
-      {/* Pre-EMI Status */}
-      <TableCell className="py-4 align-top text-center w-[10%]">
-        <div className="text-blue-600 font-medium text-sm">
-          {getPreEmiStatusLabel(application.demand_calling_status)}
-        </div>
-      </TableCell>
 
       {/* Amount Collected */}
       <TableCell className="py-4 align-top text-center w-[10%]">

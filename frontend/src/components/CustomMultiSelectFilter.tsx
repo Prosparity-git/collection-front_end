@@ -78,10 +78,18 @@ const CustomMultiSelectFilter = ({
 
   const removeItem = (item: string, event: React.MouseEvent) => {
     event.stopPropagation();
+    event.preventDefault();
     console.log('=== REMOVE ITEM ===');
     console.log('Item:', item);
     console.log('Label:', label);
-    onSelectionChange(safeSelected.filter(selected => selected !== item));
+    console.log('Current selected prop:', selected);
+    console.log('Current safeSelected:', safeSelected);
+    
+    // Use the original selected prop to ensure we're working with the latest data
+    const newSelected = selected.filter(selectedItem => selectedItem !== item);
+    console.log('New selected after removal:', newSelected);
+    
+    onSelectionChange(newSelected);
   };
 
   // Focus search input when opened
@@ -118,10 +126,21 @@ const CustomMultiSelectFilter = ({
                       className="text-xs h-6 px-2 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
                     >
                       {formatDisplay ? formatDisplay(item) : item}
-                      <X 
-                        className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500 transition-colors" 
-                        onClick={(e) => removeItem(item, e)}
-                      />
+                      <button
+                        type="button"
+                        className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500 transition-colors flex items-center justify-center"
+                        onClick={(e) => {
+                          console.log('X button clicked for item:', item);
+                          removeItem(item, e);
+                        }}
+                        onMouseDown={(e) => {
+                          console.log('X button mousedown for item:', item);
+                          e.stopPropagation();
+                        }}
+                        aria-label={`Remove ${item}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
                   {safeSelected.length > 2 && (

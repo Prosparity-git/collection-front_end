@@ -35,7 +35,10 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           label="Branch"
           options={availableOptions.branches || []}
           selected={filters.branch || []}
-          onSelectionChange={(values) => onFilterChange('branch', values)}
+          onSelectionChange={(values) => {
+            console.log('🔧 Branch filter onSelectionChange called with:', values);
+            onFilterChange('branch', values);
+          }}
           placeholder="Select branches"
         />
 

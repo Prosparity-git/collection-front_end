@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 interface FiLocationDisplayProps {
-  fiLocation: string | null;
+  fiLocation?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  address?: string | null;
 }
 
-const FiLocationDisplay = ({ fiLocation }: FiLocationDisplayProps) => {
+const FiLocationDisplay = ({ fiLocation, latitude, longitude, address }: FiLocationDisplayProps) => {
   // Parse FI location to extract coordinates
   const parseLocation = (location: string | null) => {
     if (!location || location.trim() === '') {
@@ -32,7 +35,21 @@ const FiLocationDisplay = ({ fiLocation }: FiLocationDisplayProps) => {
     return null;
   };
 
-  const coordinates = parseLocation(fiLocation);
+  // Get coordinates from either direct props or parsed fiLocation
+  const getCoordinates = () => {
+    // First try to use direct latitude/longitude props
+    if (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) {
+      // Validate coordinates
+      if (!isNaN(latitude) && !isNaN(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
+        return { lat: latitude, lng: longitude };
+      }
+    }
+    
+    // Fallback to parsing fiLocation
+    return parseLocation(fiLocation);
+  };
+
+  const coordinates = getCoordinates();
 
   if (!coordinates) {
     return null;
@@ -57,6 +74,17 @@ const FiLocationDisplay = ({ fiLocation }: FiLocationDisplayProps) => {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-3">
+          {/* Address Section */}
+          {address && (
+            <div>
+              <p className="text-sm font-medium text-gray-700">Address</p>
+              <p className="text-xs text-gray-600">
+                {address}
+              </p>
+            </div>
+          )}
+          
+          {/* Coordinates Section */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-700">Coordinates</p>

@@ -2,6 +2,7 @@
 export * from './applicationService';
 export * from './commentsService';
 export * from './contactsService';
+export * from './exportService';
 export * from './filtersService';
 export * from './monthDropdownService';
 export * from './paidPendingService';
