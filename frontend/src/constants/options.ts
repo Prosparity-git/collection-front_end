@@ -21,5 +21,6 @@ export const STATUS_FILTER_OPTIONS = [
   "Cash Collected from Customer",
   "Customer Deposited to Bank",
   "Paid",
-  "Paid (Pending Approval)"
+  "Paid (Pending Approval)",
+  "Overdue Paid"
 ]; 

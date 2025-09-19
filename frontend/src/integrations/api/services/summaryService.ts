@@ -11,6 +11,7 @@ export interface SummaryStatusResponse {
   foreclose: number;
   paid_pending_approval: number;
   paid_rejected: number;
+  overdue_paid: number;
 }
 
 // Summary Service

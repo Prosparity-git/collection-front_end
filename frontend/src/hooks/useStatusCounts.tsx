@@ -14,6 +14,7 @@ interface StatusCounts {
   statusForeclose: number;
   statusPendingApproval: number;
   statusPaidRejected: number;
+  statusOverduePaid: number;
 }
 
 interface UseStatusCountsProps {
@@ -69,7 +70,8 @@ export const useStatusCounts = ({ filters, selectedEmiMonth, searchTerm = '' }: 
         statusPaid: 0,
         statusForeclose: 0,
         statusPendingApproval: 0,
-        statusPaidRejected: 0
+        statusPaidRejected: 0,
+        statusOverduePaid: 0
       });
       setLoading(false);
       return;
@@ -88,7 +90,8 @@ export const useStatusCounts = ({ filters, selectedEmiMonth, searchTerm = '' }: 
         statusPaid: summary.paid || 0,
         statusForeclose: summary.foreclose || 0,
         statusPendingApproval: summary.paid_pending_approval || 0,
-        statusPaidRejected: summary.paid_rejected || 0
+        statusPaidRejected: summary.paid_rejected || 0,
+        statusOverduePaid: summary.overdue_paid || 0
       });
     } catch (error) {
       console.error('Error fetching status counts:', error);
@@ -100,7 +103,8 @@ export const useStatusCounts = ({ filters, selectedEmiMonth, searchTerm = '' }: 
         statusPaid: 0,
         statusForeclose: 0,
         statusPendingApproval: 0,
-        statusPaidRejected: 0
+        statusPaidRejected: 0,
+        statusOverduePaid: 0
       });
     } finally {
       setLoading(false);

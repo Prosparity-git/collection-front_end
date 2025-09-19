@@ -16,6 +16,7 @@ interface StatusCounts {
   foreclose: number;
   paid_pending_approval: number;
   paid_rejected: number;
+  overdue_paid: number;
 }
 
 const MobileStatusCards = ({ applications }: MobileStatusCardsProps) => {
@@ -73,7 +74,7 @@ const MobileStatusCards = ({ applications }: MobileStatusCardsProps) => {
     return `${Math.round((value / total) * 100)}%`;
   };
 
-  // Arrangement: 8 cards as per new backend structure - match desktop exactly
+  // Arrangement: 8 cards as per new backend structure (Future hidden, Overdue Paid added)
   const cards = [
     {
       title: "Total",
@@ -82,16 +83,16 @@ const MobileStatusCards = ({ applications }: MobileStatusCardsProps) => {
       className: "bg-blue-50 border-blue-200"
     },
     {
-      title: "Future",
-      value: statusCounts.future || 0,
-      percentage: calculatePercentage(statusCounts.future || 0, statusCounts.total),
-      className: "bg-green-50 border-green-200"
-    },
-    {
       title: "Overdue",
       value: statusCounts.overdue || 0,
       percentage: calculatePercentage(statusCounts.overdue || 0, statusCounts.total),
       className: "bg-red-50 border-red-200"
+    },
+    {
+      title: "Overdue Paid",
+      value: statusCounts.overdue_paid || 0,
+      percentage: calculatePercentage(statusCounts.overdue_paid || 0, statusCounts.total),
+      className: "bg-orange-50 border-orange-200"
     },
     {
       title: "Partially Paid",
