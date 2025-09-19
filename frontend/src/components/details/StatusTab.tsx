@@ -54,6 +54,9 @@ const mapBackendStatusToDropdownValue = (backendStatus: string | null | undefine
     "partially paid": "2",
     "foreclose": "5",
     "paid (pending approval)": "6",
+    "paid(pending approval)": "6", // Handle without space
+    "paid pending approval": "6", // Handle without parentheses
+    "paid pending": "6", // Handle abbreviated version
     "1": "1",
     "4": "4",
     "2": "2", 
@@ -209,7 +212,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       const dropdownValue = mapBackendStatusToDropdownValue(application.status);
       console.log('🔄 StatusTab: Setting dropdown value from application status:', {
         status: application.status,
-        dropdownValue: dropdownValue
+        dropdownValue: dropdownValue,
+        isPaidPendingApproval: application.status.toLowerCase().includes('paid') && application.status.toLowerCase().includes('pending')
       });
       updates.repaymentStatus = dropdownValue;
       setCurrentStatus(application.status);
@@ -286,7 +290,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       console.log('🔄 StatusTab: Updating dropdown value from application status change:', {
         status: application.status,
         dropdownValue: dropdownValue,
-        selectedMonth: selectedMonth
+        selectedMonth: selectedMonth,
+        isPaidPendingApproval: application.status.toLowerCase().includes('paid') && application.status.toLowerCase().includes('pending')
       });
       updates.repaymentStatus = dropdownValue;
       setCurrentStatus(application.status);
@@ -547,12 +552,14 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       repaymentStatus: {
         value: formData.repaymentStatus,
         type: typeof formData.repaymentStatus,
-        label: REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === formData.repaymentStatus)?.label || 'Not found'
+        label: REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === formData.repaymentStatus)?.label || 'Not found',
+        isPaidPendingApproval: formData.repaymentStatus === '6'
       },
       ptpDate: formData.ptpDate,
-      amountCollected: formData.amountCollected
+      amountCollected: formData.amountCollected,
+      currentStatus: currentStatus
     });
-  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected]);
+  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, currentStatus]);
 
   // Debug form data on every render
   useEffect(() => {
@@ -790,6 +797,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   <SelectValue placeholder={
                     currentStatus === '3' || currentStatus === 'Paid' ? 'Paid' :
                     currentStatus === '7' || currentStatus === 'Paid Rejected' ? 'Paid Rejected' :
+                    currentStatus === '6' || currentStatus === 'Paid (Pending Approval)' ? 'Paid (Pending Approval)' :
                     'Select repayment status...'
                   } />
                 </SelectTrigger>

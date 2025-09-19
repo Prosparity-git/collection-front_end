@@ -91,7 +91,8 @@ export const mapRepaymentStatusToId = (status: string): number => {
     "Cash Collected from Customer": 2,
     "Customer Deposited to Bank": 3,
     "Paid": 4,
-    "Paid (Pending Approval)": 5
+    "Paid (Pending Approval)": 6,
+    "Paid(Pending Approval)": 6 // Handle format without space
   };
   return repaymentStatusMap[status] ?? 0;
 };

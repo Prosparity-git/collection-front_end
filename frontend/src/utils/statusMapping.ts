@@ -19,6 +19,7 @@ export const STATUS_LABEL_TO_INTEGER = {
   'Overdue': '4',
   'Foreclose': '5',
   'Paid (Pending Approval)': '6',
+  'Paid(Pending Approval)': '6', // Handle format without space
   'Paid Rejected': '7'
 };
 
