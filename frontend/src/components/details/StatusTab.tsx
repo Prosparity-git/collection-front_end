@@ -40,9 +40,7 @@ const REPAYMENT_STATUS_OPTIONS = [
   { value: "4", label: "Overdue" },
   { value: "2", label: "Partially Paid" },
   { value: "5", label: "Foreclose" },
-  { value: "6", label: "Paid (Pending Approval)" },
-  { value: "3", label: "Paid" },
-  { value: "7", label: "Paid Rejected" }
+  { value: "6", label: "Paid (Pending Approval)" }
 ];
 
 // Map backend status values to frontend dropdown values
@@ -56,15 +54,11 @@ const mapBackendStatusToDropdownValue = (backendStatus: string | null | undefine
     "partially paid": "2",
     "foreclose": "5",
     "paid (pending approval)": "6",
-    "paid": "3",
-    "paid rejected": "7",
     "1": "1",
     "4": "4",
     "2": "2", 
     "5": "5",
-    "6": "6",
-    "3": "3",
-    "7": "7"
+    "6": "6"
   };
   
   return mapping[normalizedValue] || '';
@@ -99,10 +93,9 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Check if status is "Paid" or "Paid Rejected" to disable demand and repayment status fields
+  // Check if status is "Paid" to disable demand and repayment status fields
   const isStatusPaid = useMemo(() => {
-    return currentStatus === '3' || currentStatus === 'Paid' || 
-           currentStatus === '7' || currentStatus === 'Paid Rejected';
+    return currentStatus === '3' || currentStatus === 'Paid';
   }, [currentStatus]);
 
   // Set form data based on current status when status changes
@@ -794,7 +787,11 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 disabled={isStatusPaid}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select repayment status..." />
+                  <SelectValue placeholder={
+                    currentStatus === '3' || currentStatus === 'Paid' ? 'Paid' :
+                    currentStatus === '7' || currentStatus === 'Paid Rejected' ? 'Paid Rejected' :
+                    'Select repayment status...'
+                  } />
                 </SelectTrigger>
                 <SelectContent>
                   {REPAYMENT_STATUS_OPTIONS.map((option) => (
@@ -810,7 +807,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
               </Select>
               {isStatusPaid && (
                 <div className="text-xs text-amber-600 mt-1">
-                  Repayment status cannot be changed when current status is "Paid" or "Paid Rejected"
+                  Repayment status cannot be changed when current status is "Paid"
                 </div>
               )}
             </div>
