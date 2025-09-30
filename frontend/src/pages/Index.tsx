@@ -33,6 +33,8 @@ const Index = () => {
     branch: [],
     teamLead: [],
     rm: [],
+    sourceTeamLead: [],
+    sourceRm: [],
     dealer: [],
     lender: [],
     status: [],
@@ -117,6 +119,8 @@ const Index = () => {
       branch: filters.branch,
       teamLead: filters.teamLead,
       rm: filters.rm,
+      sourceTeamLead: filters.sourceTeamLead,
+      sourceRm: filters.sourceRm,
       dealer: filters.dealer,
       lender: filters.lender,
       status: filters.status,
@@ -155,7 +159,7 @@ const Index = () => {
         setApplications([]);
       })
       .finally(() => setLoading(false));
-  }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus]);
+  }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus]);
 
   // Fetch summary when EMI month changes
   useEffect(() => {
@@ -269,7 +273,7 @@ const Index = () => {
     console.log('Filter change - values content:', values);
     
     // Special handling for filters that should trigger fresh data fetch
-    const shouldFetchFreshData = ['ptpDate', 'repayment', 'status', 'branch', 'dealer', 'lender', 'rm', 'teamLead'];
+    const shouldFetchFreshData = ['ptpDate', 'repayment', 'status', 'branch', 'dealer', 'lender', 'rm', 'teamLead', 'sourceRm', 'sourceTeamLead'];
     
     if (shouldFetchFreshData.includes(key)) {
       console.log('🔄 Filter change requires fresh data fetch:', key);
@@ -327,6 +331,8 @@ const Index = () => {
     vehicle_statuses: filterOptions.vehicle_statuses,
     team_leads: filterOptions.team_leads,
     rms: filterOptions.rms,
+    source_team_leads: filterOptions.source_team_leads,
+    source_rms: filterOptions.source_rms,
     repayments: filterOptions.demand_num, // Map demand_num to repayments
     lastMonthBounce: ['Not paid', 'Paid on time', '1-5 days late', '6-15 days late', '15+ days late'], // Hardcoded options
   };

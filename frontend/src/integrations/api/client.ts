@@ -275,6 +275,8 @@ export async function getApplicationsFromBackend(
     branch?: string[];
     teamLead?: string[];
     rm?: string[];
+    sourceTeamLead?: string[];
+    sourceRm?: string[];
     dealer?: string[];
     lender?: string[];
     status?: string[];
@@ -301,6 +303,12 @@ export async function getApplicationsFromBackend(
   }
   if (additionalFilters.rm && additionalFilters.rm.length > 0) {
     params.append('rm_name', additionalFilters.rm.join(','));
+  }
+  if (additionalFilters.sourceTeamLead && additionalFilters.sourceTeamLead.length > 0) {
+    params.append('source_tl_name', additionalFilters.sourceTeamLead.join(','));
+  }
+  if (additionalFilters.sourceRm && additionalFilters.sourceRm.length > 0) {
+    params.append('source_rm_name', additionalFilters.sourceRm.join(','));
   }
   if (additionalFilters.dealer && additionalFilters.dealer.length > 0) {
     params.append('dealer', additionalFilters.dealer.join(','));

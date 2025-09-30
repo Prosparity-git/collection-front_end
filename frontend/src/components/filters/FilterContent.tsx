@@ -42,22 +42,40 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           placeholder="Select branches"
         />
 
-        {/* Team Lead Filter */}
+        {/* Current Team Lead Filter */}
         <CustomMultiSelectFilter
-          label="Team Lead"
+          label="Current Team Lead"
           options={availableOptions.team_leads || []}
           selected={filters.teamLead || []}
           onSelectionChange={(values) => onFilterChange('teamLead', values)}
           placeholder="Select team leads"
         />
 
-        {/* RM Filter */}
+        {/* Current RM Filter */}
         <CustomMultiSelectFilter
-          label="RM"
+          label="Current RM"
           options={availableOptions.rms || []}
           selected={filters.rm || []}
           onSelectionChange={(values) => onFilterChange('rm', values)}
           placeholder="Select RMs"
+        />
+
+        {/* Source Team Lead Filter */}
+        <CustomMultiSelectFilter
+          label="Source Team Lead"
+          options={availableOptions.source_team_leads || []}
+          selected={filters.sourceTeamLead || []}
+          onSelectionChange={(values) => onFilterChange('sourceTeamLead', values)}
+          placeholder="Select source team leads"
+        />
+
+        {/* Source RM Filter */}
+        <CustomMultiSelectFilter
+          label="Source RM"
+          options={availableOptions.source_rms || []}
+          selected={filters.sourceRm || []}
+          onSelectionChange={(values) => onFilterChange('sourceRm', values)}
+          placeholder="Select source RMs"
         />
 
         {/* Dealer Filter */}
