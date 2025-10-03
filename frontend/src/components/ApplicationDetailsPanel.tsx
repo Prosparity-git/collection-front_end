@@ -12,6 +12,7 @@ import ApplicationHeader from "./details/ApplicationHeader";
 import ContactsTab from "./details/ContactsTab";
 import StatusTab from "./details/StatusTab";
 import CommentsTab from "./details/CommentsTab";
+import FieldVisitTab from "./details/FieldVisitTab";
 import DetailsTab from "./details/DetailsTab";
 import { useApplicationHandlers } from "./details/ApplicationHandlers";
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -709,11 +710,12 @@ const ApplicationDetailsPanel = ({
       <div className="flex-1 flex-col-min-h-0">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
           <div className="flex-shrink-0 pt-3 sm:pt-4 border-b">
-            <TabsList className="grid w-full grid-cols-4 text-xs sm:text-sm h-auto">
-              <TabsTrigger value="contacts" className="py-2">Contacts</TabsTrigger>
-              <TabsTrigger value="status" className="py-2">Status</TabsTrigger>
-              <TabsTrigger value="comments" className="py-2">Comments</TabsTrigger>
-              <TabsTrigger value="details" className="py-2">Details</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5 text-xs sm:text-sm h-auto min-w-0">
+              <TabsTrigger value="contacts" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Contacts</TabsTrigger>
+              <TabsTrigger value="status" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Status</TabsTrigger>
+              <TabsTrigger value="comments" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Comments</TabsTrigger>
+              <TabsTrigger value="field-visits" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Field Visits</TabsTrigger>
+              <TabsTrigger value="details" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Details</TabsTrigger>
             </TabsList>
           </div>
           
@@ -747,6 +749,13 @@ const ApplicationDetailsPanel = ({
                 onAddComment={handleAddComment}
                 paymentId={currentApplication.payment_id}
                 applicationId={currentApplication.applicant_id}
+              />
+            </TabsContent>
+            <TabsContent value="field-visits" className="m-0">
+              <FieldVisitTab 
+                application={currentApplication}
+                paymentId={currentApplication.payment_id}
+                applicationId={currentApplication.loan_id}
               />
             </TabsContent>
             <TabsContent value="details" className="m-0">

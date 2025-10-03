@@ -46,7 +46,19 @@ export async function handleApiResponse<T>(response: Response): Promise<ApiRespo
     let errorMessage = `HTTP ${response.status}`;
     try {
       const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.message || errorMessage;
+      // Handle different error response formats
+      if (errorData.detail) {
+        // If detail is an array (validation errors), join them
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((err: any) => err.msg || err).join('; ');
+        } else {
+          errorMessage = errorData.detail;
+        }
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error) {
+        errorMessage = errorData.error;
+      }
     } catch {
       errorMessage = `HTTP ${response.status}: ${response.statusText}`;
     }

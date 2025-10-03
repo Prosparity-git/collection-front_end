@@ -71,10 +71,18 @@ export const formatMapLocation = (fiLocation?: string) => {
 };
 
 export const getCurrentEmiMonth = (): string => {
-  const now = new Date();
-  const month = now.toLocaleString('en-US', { month: 'short' });
-  const year = now.getFullYear().toString().slice(-2);
-  return `${month}-${year}`;
+  // Compute current month in Indian Standard Time
+  const month = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    timeZone: 'Asia/Kolkata'
+  }).format(new Date());
+
+  const yearFull = new Intl.DateTimeFormat('en-US', {
+    year: '2-digit',
+    timeZone: 'Asia/Kolkata'
+  }).format(new Date());
+
+  return `${month}-${yearFull}`;
 };
 
 // Function to get the next month in Mon-YY format
@@ -135,6 +143,8 @@ export const getPreviousMonth = (currentMonth: string): string => {
 export const generateMonthOptions = (): string[] => {
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const currentMonth = getCurrentEmiMonth();
+  // Ensure we include one month ahead of the current month (e.g., show Oct-25 when current is Sep-25)
+  const endMonth = getNextMonth(currentMonth);
   const [currentMonthStr, currentYearStr] = currentMonth.split('-');
   const currentYear = parseInt(currentYearStr);
   
@@ -150,8 +160,8 @@ export const generateMonthOptions = (): string[] => {
     
     options.push(monthOption);
     
-    // Check if we've reached the current month
-    if (monthOption === currentMonth) {
+    // Check if we've reached the end month (next month after current)
+    if (monthOption === endMonth) {
       break;
     }
     
