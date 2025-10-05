@@ -74,8 +74,8 @@ const MobileStatusCards = ({ applications }: MobileStatusCardsProps) => {
     return `${Math.round((value / total) * 100)}%`;
   };
 
-  // Arrangement: 8 cards as per new backend structure (Future hidden, Overdue Paid added)
-  const cards = [
+  // All available cards (ForeClose hidden from display)
+  const allCards = [
     {
       title: "Total",
       value: statusCounts.total,
@@ -110,7 +110,8 @@ const MobileStatusCards = ({ applications }: MobileStatusCardsProps) => {
       title: "Foreclose",
       value: statusCounts.foreclose || 0,
       percentage: calculatePercentage(statusCounts.foreclose || 0, statusCounts.total),
-      className: "bg-gray-50 border-gray-200"
+      className: "bg-gray-50 border-gray-200",
+      hidden: true // Hide this card from display
     },
     {
       title: "Paid (Pending Approval)",
@@ -126,8 +127,11 @@ const MobileStatusCards = ({ applications }: MobileStatusCardsProps) => {
     }
   ];
 
+  // Filter out hidden cards for display
+  const cards = allCards.filter(card => !card.hidden);
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-1 sm:gap-2 md:gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1 sm:gap-2 md:gap-3">
       {cards.map((card, index) => (
         <Card key={index} className={`${card.className} border shadow-sm`}>
           <CardHeader className="pb-1 pt-1 px-1 sm:pb-2 sm:pt-2 sm:px-2">

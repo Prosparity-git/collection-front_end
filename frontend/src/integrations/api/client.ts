@@ -46,7 +46,19 @@ export async function handleApiResponse<T>(response: Response): Promise<ApiRespo
     let errorMessage = `HTTP ${response.status}`;
     try {
       const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.message || errorMessage;
+      // Handle different error response formats
+      if (errorData.detail) {
+        // If detail is an array (validation errors), join them
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((err: any) => err.msg || err).join('; ');
+        } else {
+          errorMessage = errorData.detail;
+        }
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error) {
+        errorMessage = errorData.error;
+      }
     } catch {
       errorMessage = `HTTP ${response.status}: ${response.statusText}`;
     }
@@ -275,6 +287,8 @@ export async function getApplicationsFromBackend(
     branch?: string[];
     teamLead?: string[];
     rm?: string[];
+    sourceTeamLead?: string[];
+    sourceRm?: string[];
     dealer?: string[];
     lender?: string[];
     status?: string[];
@@ -301,6 +315,12 @@ export async function getApplicationsFromBackend(
   }
   if (additionalFilters.rm && additionalFilters.rm.length > 0) {
     params.append('rm_name', additionalFilters.rm.join(','));
+  }
+  if (additionalFilters.sourceTeamLead && additionalFilters.sourceTeamLead.length > 0) {
+    params.append('source_tl_name', additionalFilters.sourceTeamLead.join(','));
+  }
+  if (additionalFilters.sourceRm && additionalFilters.sourceRm.length > 0) {
+    params.append('source_rm_name', additionalFilters.sourceRm.join(','));
   }
   if (additionalFilters.dealer && additionalFilters.dealer.length > 0) {
     params.append('dealer', additionalFilters.dealer.join(','));

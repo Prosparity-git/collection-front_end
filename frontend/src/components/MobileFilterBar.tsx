@@ -9,6 +9,8 @@ interface MobileFilterBarProps {
     branch: string[];
     teamLead: string[];
     rm: string[];
+    sourceTeamLead?: string[];
+    sourceRm?: string[];
     dealer: string[];
     lender: string[];
     status: string[];
@@ -21,6 +23,8 @@ interface MobileFilterBarProps {
     branches: string[];
     team_leads: string[]; // Fix: match the actual property name from mappedOptions
     rms: string[];
+    source_team_leads?: string[];
+    source_rms?: string[];
     dealers: string[];
     lenders: string[];
     statuses: string[];
@@ -50,6 +54,8 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
     branches: availableOptions?.branches || [],
     teamLeads: availableOptions?.team_leads || [], // Use team_leads from availableOptions
     rms: availableOptions?.rms || [],
+    sourceTeamLeads: availableOptions?.source_team_leads || [],
+    sourceRms: availableOptions?.source_rms || [],
     dealers: availableOptions?.dealers || [],
     lenders: availableOptions?.lenders || [],
     statuses: availableOptions?.statuses || [],
@@ -75,6 +81,8 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
     branch: tempFilters?.branch || [],
     teamLead: tempFilters?.teamLead || [],
     rm: tempFilters?.rm || [],
+    sourceTeamLead: tempFilters?.sourceTeamLead || [],
+    sourceRm: tempFilters?.sourceRm || [],
     dealer: tempFilters?.dealer || [],
     lender: tempFilters?.lender || [],
     status: tempFilters?.status || [],
@@ -180,9 +188,9 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Team Leads</label>
+                <label className="block text-xs font-medium text-gray-700">Current Team Leads</label>
                 <CustomMultiSelectFilter
-                  label="Team Leads"
+                  label="Current Team Leads"
                   options={safeFilterOptions.teamLeads}
                   selected={safeFilters.teamLead}
                   onSelectionChange={(values) => handleTempFilterChange('teamLead', values)}
@@ -190,12 +198,32 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">RMs</label>
+                <label className="block text-xs font-medium text-gray-700">Current RMs</label>
                 <CustomMultiSelectFilter
-                  label="RMs"
+                  label="Current RMs"
                   options={safeFilterOptions.rms}
                   selected={safeFilters.rm}
                   onSelectionChange={(values) => handleTempFilterChange('rm', values)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Source Team Leads</label>
+                <CustomMultiSelectFilter
+                  label="Source Team Leads"
+                  options={safeFilterOptions.sourceTeamLeads}
+                  selected={safeFilters.sourceTeamLead}
+                  onSelectionChange={(values) => handleTempFilterChange('sourceTeamLead', values)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Source RMs</label>
+                <CustomMultiSelectFilter
+                  label="Source RMs"
+                  options={safeFilterOptions.sourceRms}
+                  selected={safeFilters.sourceRm}
+                  onSelectionChange={(values) => handleTempFilterChange('sourceRm', values)}
                 />
               </div>
 
