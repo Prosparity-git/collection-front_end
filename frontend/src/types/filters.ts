@@ -4,6 +4,8 @@ export interface FilterState {
   branch: string[];
   teamLead: string[];
   rm: string[];
+  sourceTeamLead: string[]; // Added for source TL filter
+  sourceRm: string[]; // Added for source RM filter
   dealer: string[];
   lender: string[];
   status: string[];
@@ -18,6 +20,8 @@ export interface AvailableOptions {
   branches: string[];
   teamLeads: string[];
   rms: string[];
+  source_team_leads: string[]; // Added for source TL options (matches component expectations)
+  source_rms: string[]; // Added for source RM options (matches component expectations)
   dealers: string[];
   lenders: string[];
   statuses: string[];

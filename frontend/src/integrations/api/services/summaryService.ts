@@ -44,6 +44,12 @@ export class SummaryService {
       if (filters.teamLead && filters.teamLead.length > 0) {
         queryParams.append('tl_name', filters.teamLead.join(','));
       }
+      if (filters.sourceRm && filters.sourceRm.length > 0) {
+        queryParams.append('source_rm_name', filters.sourceRm.join(','));
+      }
+      if (filters.sourceTeamLead && filters.sourceTeamLead.length > 0) {
+        queryParams.append('source_tl_name', filters.sourceTeamLead.join(','));
+      }
       if (filters.ptpDate && filters.ptpDate.length > 0) {
         // Convert PTP date display labels to backend values
         const ptpDateValues = filters.ptpDate.map(label => {

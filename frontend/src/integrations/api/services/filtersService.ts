@@ -11,6 +11,8 @@ export interface FiltersOptionsResponse {
   vehicle_statuses: string[];
   team_leads: string[];
   rms: string[];
+  source_team_leads: string[]; // Added for source TL options
+  source_rms: string[]; // Added for source RM options
   demand_num: string[]; // Added to match backend API response
 }
 
@@ -81,6 +83,18 @@ export class FiltersService {
   static async getRMs(): Promise<string[]> {
     const options = await this.getFilterOptions();
     return options.rms;
+  }
+
+  // Helper method to get source team leads only
+  static async getSourceTeamLeads(): Promise<string[]> {
+    const options = await this.getFilterOptions();
+    return options.source_team_leads || [];
+  }
+
+  // Helper method to get source RMs only
+  static async getSourceRMs(): Promise<string[]> {
+    const options = await this.getFilterOptions();
+    return options.source_rms || [];
   }
 
   // Helper method to get all filter options as a single object

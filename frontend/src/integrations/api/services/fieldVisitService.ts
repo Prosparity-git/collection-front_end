@@ -9,6 +9,7 @@ export interface FieldVisitLocation {
   latitude: string;
   longitude: string;
   agent_id: number;
+  agent_name: string;
   created_at: string;
   visit_type_name?: string;
 }
