@@ -9,6 +9,8 @@ import { History } from "lucide-react";
 import { Button } from "../ui/button";
 import LogDialog from "./LogDialog";
 import { formatEmiMonth } from "@/utils/formatters";
+import RepaymentTable from "./RepaymentTable";
+import VehicleRepossessionDetails from "./VehicleRepossessionDetails";
 
 const getVehicleStatusColor = (status: string | undefined) => {
     return VEHICLE_STATUS_OPTIONS.find(o => o.value === status)?.color || "bg-gray-400 text-white";
@@ -190,20 +192,11 @@ const DetailsTab = ({
 
   return (
     <div className="space-y-4">
-      {/* Basic Application Information */}
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>Application Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-8">
-            <DetailItem label="Application ID" value={application.applicant_id} />
-            <DetailItem label="Applicant Name" value={application.applicant_name} />
-            <DetailItem label="EMI Month" value={selectedMonth || application.emi_month} />
-            <DetailItem label="Current Status" value={getMonthSpecificStatus()} />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Repayment Table - Moved to top */}
+      <RepaymentTable loanId={application.loan_id} />
+
+      {/* Vehicle Repossession Details */}
+      <VehicleRepossessionDetails application={application} />
 
       {/* Loan & Repayment Details */}
       <Card className="overflow-hidden">
@@ -246,19 +239,7 @@ const DetailsTab = ({
         </CardContent>
       </Card>
 
-      {/* PTP & Payment Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>PTP & Payment Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-8">
-            <DetailItem label="PTP Date" value={getBestValue('ptp_date')} />
-            <DetailItem label="Amount Collected" value={getBestValue('amount_collected') ? `₹${parseFloat(getBestValue('amount_collected').toString()).toLocaleString()}` : 'N/A'} />
-            <DetailItem label="Payment Mode" value={getBestValue('payment_mode', 'mode')} />
-          </div>
-        </CardContent>
-      </Card>
+
 
 
 

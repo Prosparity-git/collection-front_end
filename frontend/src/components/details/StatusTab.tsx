@@ -40,7 +40,7 @@ const REPAYMENT_STATUS_OPTIONS = [
   { value: "4", label: "Overdue" },
   { value: "2", label: "Partially Paid" },
   { value: "5", label: "Foreclose" },
-  { value: "6", label: "Paid (Pending Approval)" }
+  { value: "6", label: "Paid" }
 ];
 
 // Map backend status values to frontend dropdown values

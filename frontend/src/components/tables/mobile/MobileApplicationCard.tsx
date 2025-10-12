@@ -104,7 +104,14 @@ const MobileApplicationCard = memo(({
         {/* Header Section - Customer Name, ID, and Status */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h3 className="font-bold text-lg text-gray-900 mb-1">{application.applicant_name}</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-lg text-gray-900">{application.applicant_name}</h3>
+              {application.vehicle_status === 'Repossessed' && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                  Repossessed
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600">ID: {application.applicant_id}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
