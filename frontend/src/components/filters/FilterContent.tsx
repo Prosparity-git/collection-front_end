@@ -87,6 +87,15 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           placeholder="Select dealers"
         />
 
+        {/* DPD Bucket Filter */}
+        <CustomMultiSelectFilter
+          label="DPD Bucket"
+          options={availableOptions.dpd_buckets || []}
+          selected={filters.dpdBucket || []}
+          onSelectionChange={(values) => onFilterChange('dpdBucket', values)}
+          placeholder="Select DPD buckets"
+        />
+
         {/* Lender Filter */}
         <CustomMultiSelectFilter
           label="Lender"

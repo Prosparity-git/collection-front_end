@@ -112,6 +112,7 @@ const ApplicationRow = memo(({
           <span className="text-xs text-gray-700">ID: {application.applicant_id}</span>
           <span className="text-xs text-gray-700">EMI Month: {formatEmiMonth(selectedEmiMonth ? selectedEmiMonth : application.emi_month)}</span>
           <span className="text-xs text-gray-700">Repayment Number: {application.demand_num || 'N/A'}</span>
+          <span className="text-xs text-gray-700">Current DPD Bucket: {application.current_dpd_bucket ?? 'X'}</span>
           <span className="text-xs text-gray-700">Branch: {application.branch_name}</span>
           <span className="text-xs text-gray-700">TL: {application.team_lead}</span>
           <span className="text-xs text-gray-700">RM: {application.rm_name}</span>

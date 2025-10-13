@@ -71,6 +71,7 @@ export interface Application {
   repossession_date?: string; // Vehicle repossession date
   repossession_sale_date?: string; // Vehicle repossession sale date
   repossession_sale_amount?: number; // Vehicle repossession sale amount
+  current_dpd_bucket?: string | null; // Current DPD bucket from backend
 }
 
 export interface AuditLog {

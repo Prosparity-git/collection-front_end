@@ -199,6 +199,15 @@ const MobileApplicationCard = memo(({
                 <div className="text-sm font-medium">{application.demand_num || 'N/A'}</div>
               </div>
             </div>
+
+            {/* Current DPD Bucket */}
+            <div className="flex items-start gap-2">
+              <div className="h-4 w-4 flex-shrink-0 mt-0.5"></div>
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">Current DPD Bucket:</div>
+                <div className="text-sm font-medium">{application.current_dpd_bucket ?? 'X'}</div>
+              </div>
+            </div>
             
             {/* Branch */}
             <div className="flex items-start gap-2">

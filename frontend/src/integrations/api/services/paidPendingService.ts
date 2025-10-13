@@ -38,8 +38,8 @@ export interface PaidPendingApprovalResponse {
 export class PaidPendingService {
   // GET /api/v1/paidpending-approval/ - Get all paid pending applications
   static async getPaidPendingApplications(): Promise<PaidPendingApplicationsResponse> {
-    const response = await fetch(`${API_BASE_URL}/paidpending-approval/`, {
-      headers: getAuthHeaders()
+    const response = await authenticatedFetch(`${API_BASE_URL}/paidpending-approval/`, {
+      
     });
 
     if (!response.ok) {
@@ -64,8 +64,8 @@ export class PaidPendingService {
     payment_date: string | null;
     updated_at: string | null;
   }> {
-    const response = await fetch(`${API_BASE_URL}/paidpending-approval/${loanId}`, {
-      headers: getAuthHeaders()
+    const response = await authenticatedFetch(`${API_BASE_URL}/paidpending-approval/${loanId}`, {
+      
     });
 
     if (!response.ok) {
@@ -79,7 +79,7 @@ export class PaidPendingService {
   static async approveRejectPaidPending(
     approvalData: PaidPendingApprovalRequest
   ): Promise<PaidPendingApprovalResponse> {
-    const response = await fetch(`${API_BASE_URL}/paidpending-approval/approve`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/paidpending-approval/approve`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,9 +108,9 @@ export class PaidPendingService {
       limit: limit.toString(),
     });
 
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${API_BASE_URL}/paidpending-applications/?${queryParams.toString()}`,
-      { headers: getAuthHeaders() }
+      {  }
     );
 
     if (!response.ok) {

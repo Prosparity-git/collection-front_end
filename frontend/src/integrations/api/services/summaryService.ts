@@ -64,6 +64,9 @@ export class SummaryService {
         });
         queryParams.append('ptp_date_filter', ptpDateValues.join(','));
       }
+      if ((filters as any).dpdBucket && (filters as any).dpdBucket.length > 0) {
+        queryParams.append('current_dpd_bucket', (filters as any).dpdBucket.join(','));
+      }
       if (filters.repayment && filters.repayment.length > 0) {
         queryParams.append('demand_num', filters.repayment.join(','));
       }

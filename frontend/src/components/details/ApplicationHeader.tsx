@@ -9,7 +9,8 @@ interface ApplicationHeaderProps {
 
 const VEHICLE_STATUS_COLORS: { [key: string]: string } = {
   "Risky": "bg-yellow-500 text-white",
-  "Repossessed": "bg-red-600 text-white",
+  // Match Applications table/mobile badge styling (light red pill)
+  "Repossessed": "bg-red-100 text-red-800 border border-red-200",
   "Might Need to Repossess": "bg-orange-500 text-white",
 };
 
