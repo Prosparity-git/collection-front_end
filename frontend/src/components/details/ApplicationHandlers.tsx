@@ -21,6 +21,8 @@ export const useApplicationHandlers = (
     const updatedApplication = { ...application, lms_status: newStatus };
 
     // 1. Optimistic UI update - update both local state and parent
+    // 1. Optimistic UI update - update both local state and parent
+
     onUpdate(updatedApplication);
 
     try {
