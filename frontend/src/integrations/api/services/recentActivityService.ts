@@ -45,9 +45,9 @@ export class RecentActivityService {
 
     const url = `${API_BASE_URL}/recent-activity/?${queryParams.toString()}`;
     
-    const response = await authenticatedFetch(url, {
+    const response = await fetch(url, {
       method: 'GET',
-      ,
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -86,9 +86,9 @@ export class RecentActivityService {
     console.log('🌐 RecentActivityService: Making API call to:', url);
     console.log('🌐 RecentActivityService: Query parameters:', Object.fromEntries(queryParams.entries()));
     
-    const response = await authenticatedFetch(url, {
+    const response = await fetch(url, {
       method: 'GET',
-      ,
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {

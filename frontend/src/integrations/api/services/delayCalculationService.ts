@@ -27,9 +27,9 @@ export class DelayCalculationService {
     
     console.log('🌐 DelayCalculationService: Making API call to:', url);
     
-    const response = await authenticatedFetch(url, {
+    const response = await fetch(url, {
       method: 'GET',
-      ,
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
