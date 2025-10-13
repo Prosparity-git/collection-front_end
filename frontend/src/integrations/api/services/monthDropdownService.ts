@@ -24,8 +24,9 @@ export class MonthDropdownService {
     try {
       console.log('📅 Fetching month dropdown options for loan_id:', loanId);
       
-      const response = await authenticatedFetch(`${API_BASE_URL}/month-dropdown/${loanId}/months`, {
-        
+      const response = await fetch(`${API_BASE_URL}/month-dropdown/${loanId}/months`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
       });
       
       if (!response.ok) {

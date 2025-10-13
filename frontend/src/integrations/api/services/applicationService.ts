@@ -62,8 +62,9 @@ export class ApplicationService {
     if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
     if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
 
-    const response = await authenticatedFetch(`${API_BASE_URL}/applications/?${queryParams.toString()}`, {
-      
+    const response = await fetch(`${API_BASE_URL}/applications/?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
     });
     
     if (!response.ok) {

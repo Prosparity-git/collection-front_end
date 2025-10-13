@@ -21,7 +21,7 @@ export class ExportService {
       format
     });
 
-    const response = await authenticatedFetch(`${API_BASE_URL}/export/collection-data?${queryParams}`, {
+    const response = await fetch(`${API_BASE_URL}/export/collection-data?${queryParams}`, {
       method: 'GET',
       headers: {
         ...getAuthHeaders(),
