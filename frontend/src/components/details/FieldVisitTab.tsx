@@ -172,8 +172,34 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
 
     } catch (error) {
       console.error('Failed to record field visit:', error);
-      // Extract the actual error message from the error object
-      const errorMessage = error instanceof Error ? error.message : 'Failed to record field visit';
+      
+      // Parse error message to show user-friendly version
+      let errorMessage = 'Failed to record field visit';
+      if (error instanceof Error) {
+        const errorText = error.message;
+        
+        // Extract distance from error message (Hindi text)
+        const distanceMatch = errorText.match(/दूरी:\s*([\d,]+)\s*मीटर/);
+        const statusMatch = errorText.match(/Error creating field visit:\s*\d+:/);
+        
+        if (distanceMatch) {
+          const distance = parseInt(distanceMatch[1].replace(/,/g, ''));
+          
+          // Show distance in meters if under 1000m, in kilometers if above 1000m
+          let distanceText;
+          if (distance < 1000) {
+            distanceText = `${distance} मीटर`;
+          } else {
+            const distanceKm = (distance / 1000).toFixed(1);
+            distanceText = `${distanceKm} किमी`;
+          }
+          
+          errorMessage = `ग्राहक के घर से बहुत दूर हैं (${distanceText})। कृपया 100 मीटर के दायरे में जाएं।`;
+        } else {
+          errorMessage = errorText;
+        }
+      }
+      
       setAlert({ type: 'error', message: errorMessage });
       toast.error(errorMessage);
     } finally {
@@ -372,13 +398,19 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                 <div key={visit.id} className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="space-y-3">
                     {/* Visit Info */}
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        #{visit.id}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {getVisitTypeName(visit.visit_type_id)}
-                      </Badge>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          #{visit.id}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {getVisitTypeName(visit.visit_type_id)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">Agent:</span>
+                        <span className="text-xs text-gray-700 font-medium">{visit.agent_name}</span>
+                      </div>
                     </div>
                     
                     {/* Date and Time */}
@@ -438,9 +470,15 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
               <div className="p-3 bg-gray-50 rounded-lg space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      Visit #{selectedVisitForMap.id} - {getVisitTypeName(selectedVisitForMap.visit_type_id)}
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-sm">
+                        Visit #{selectedVisitForMap.id} - {getVisitTypeName(selectedVisitForMap.visit_type_id)}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">Agent:</span>
+                        <span className="text-xs text-gray-700 font-medium">{selectedVisitForMap.agent_name}</span>
+                      </div>
+                    </div>
                     <p className="text-xs text-gray-600">
                       {formatDateTime(selectedVisitForMap.created_at)}
                     </p>

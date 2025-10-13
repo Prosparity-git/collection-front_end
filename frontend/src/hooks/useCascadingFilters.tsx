@@ -70,6 +70,8 @@ export const useCascadingFilters = () => {
         branches: filterOptions.branches || [],
         teamLeads: filterOptions.team_leads || [],
         rms: filterOptions.rms || [],
+        source_team_leads: filterOptions.source_team_leads || [],
+        source_rms: filterOptions.source_rms || [],
         dealers: filterOptions.dealers || [],
         lenders: filterOptions.lenders || [],
         statuses: filterOptions.statuses || [],

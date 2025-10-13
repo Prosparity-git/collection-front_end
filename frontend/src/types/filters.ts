@@ -4,6 +4,8 @@ export interface FilterState {
   branch: string[];
   teamLead: string[];
   rm: string[];
+  sourceTeamLead: string[]; // Added for source TL filter
+  sourceRm: string[]; // Added for source RM filter
   dealer: string[];
   lender: string[];
   status: string[];
@@ -12,12 +14,15 @@ export interface FilterState {
   lastMonthBounce: LastMonthBounceCategory[];
   ptpDate: string[]; // Changed to string[] to handle display labels
   vehicleStatus: string[];
+  dpdBucket: string[];
 }
 
 export interface AvailableOptions {
   branches: string[];
   teamLeads: string[];
   rms: string[];
+  source_team_leads: string[]; // Added for source TL options (matches component expectations)
+  source_rms: string[]; // Added for source RM options (matches component expectations)
   dealers: string[];
   lenders: string[];
   statuses: string[];
@@ -27,6 +32,7 @@ export interface AvailableOptions {
   ptpDateOptions: string[];
   vehicleStatusOptions: string[];
   demand_num: string[]; // Added to match backend API response
+  dpdBuckets?: string[]; // From backend dpd_buckets
 }
 
 // Export alias for compatibility

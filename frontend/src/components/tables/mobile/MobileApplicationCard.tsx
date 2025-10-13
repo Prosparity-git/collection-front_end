@@ -104,7 +104,14 @@ const MobileApplicationCard = memo(({
         {/* Header Section - Customer Name, ID, and Status */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h3 className="font-bold text-lg text-gray-900 mb-1">{application.applicant_name}</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-lg text-gray-900">{application.applicant_name}</h3>
+              {application.vehicle_status === 'Repossessed' && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                  Repossessed
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600">ID: {application.applicant_id}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -190,6 +197,15 @@ const MobileApplicationCard = memo(({
               <div className="min-w-0">
                 <div className="text-sm text-gray-600">Repayment Number:</div>
                 <div className="text-sm font-medium">{application.demand_num || 'N/A'}</div>
+              </div>
+            </div>
+
+            {/* Current DPD Bucket */}
+            <div className="flex items-start gap-2">
+              <div className="h-4 w-4 flex-shrink-0 mt-0.5"></div>
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">Current DPD Bucket:</div>
+                <div className="text-sm font-medium">{application.current_dpd_bucket ?? 'X'}</div>
               </div>
             </div>
             

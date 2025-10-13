@@ -68,6 +68,10 @@ export interface Application {
   latitude?: number; // Latitude coordinate from API response
   longitude?: number; // Longitude coordinate from API response
   address?: string; // Address from API response
+  repossession_date?: string; // Vehicle repossession date
+  repossession_sale_date?: string; // Vehicle repossession sale date
+  repossession_sale_amount?: number; // Vehicle repossession sale amount
+  current_dpd_bucket?: string | null; // Current DPD bucket from backend
 }
 
 export interface AuditLog {

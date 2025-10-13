@@ -39,7 +39,8 @@ export class PaidPendingService {
   // GET /api/v1/paidpending-approval/ - Get all paid pending applications
   static async getPaidPendingApplications(): Promise<PaidPendingApplicationsResponse> {
     const response = await fetch(`${API_BASE_URL}/paidpending-approval/`, {
-      headers: getAuthHeaders()
+      method: 'GET',
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -65,7 +66,8 @@ export class PaidPendingService {
     updated_at: string | null;
   }> {
     const response = await fetch(`${API_BASE_URL}/paidpending-approval/${loanId}`, {
-      headers: getAuthHeaders()
+      method: 'GET',
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -110,7 +112,10 @@ export class PaidPendingService {
 
     const response = await fetch(
       `${API_BASE_URL}/paidpending-applications/?${queryParams.toString()}`,
-      { headers: getAuthHeaders() }
+      {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      }
     );
 
     if (!response.ok) {

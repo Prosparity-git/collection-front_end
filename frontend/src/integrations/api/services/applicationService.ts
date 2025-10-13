@@ -63,7 +63,8 @@ export class ApplicationService {
     if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
 
     const response = await fetch(`${API_BASE_URL}/applications/?${queryParams.toString()}`, {
-      headers: getAuthHeaders()
+      method: 'GET',
+      headers: getAuthHeaders(),
     });
     
     if (!response.ok) {

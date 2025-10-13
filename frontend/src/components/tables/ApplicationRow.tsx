@@ -101,10 +101,18 @@ const ApplicationRow = memo(({
       {/* Application Details */}
       <TableCell className="py-4 align-top w-[24%]">
         <div className="flex flex-col gap-1">
-          <span className="font-bold text-blue-800">{application.applicant_name}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-blue-800">{application.applicant_name}</span>
+            {application.vehicle_status === 'Repossessed' && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                Repossessed
+              </span>
+            )}
+          </div>
           <span className="text-xs text-gray-700">ID: {application.applicant_id}</span>
           <span className="text-xs text-gray-700">EMI Month: {formatEmiMonth(selectedEmiMonth ? selectedEmiMonth : application.emi_month)}</span>
           <span className="text-xs text-gray-700">Repayment Number: {application.demand_num || 'N/A'}</span>
+          <span className="text-xs text-gray-700">Current DPD Bucket: {application.current_dpd_bucket ?? 'X'}</span>
           <span className="text-xs text-gray-700">Branch: {application.branch_name}</span>
           <span className="text-xs text-gray-700">TL: {application.team_lead}</span>
           <span className="text-xs text-gray-700">RM: {application.rm_name}</span>

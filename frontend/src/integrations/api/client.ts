@@ -127,6 +127,11 @@ interface ApiApplicationItem {
   latitude?: number; // Latitude coordinate from API response
   longitude?: number; // Longitude coordinate from API response
   address?: string; // Address from API response
+  vehicle_status_name?: string; // Vehicle status name from API response
+  repossession_date?: string; // Vehicle repossession date
+  repossession_sale_date?: string; // Vehicle repossession sale date
+  repossession_sale_amount?: number; // Vehicle repossession sale amount
+  current_dpd_bucket?: string | null; // Current DPD bucket
 }
 
 interface ApiFilteredResponse {
@@ -159,13 +164,13 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ptp_date: apiItem.ptp_date,
-    latest_calling_status: apiItem.calling_status,
-    calling_status: apiItem.calling_status, 
-    recent_comments: apiItem.comments.map((comment: string) => ({
+    latest_calling_status: apiItem.calling_status || 'Not Called',
+    calling_status: apiItem.calling_status || 'Not Called', 
+    recent_comments: (apiItem.comments || []).map((comment: string) => ({
       content: comment,
       user_name: 'Unknown'
     })),
-    comments: apiItem.comments, 
+    comments: apiItem.comments || [], 
     applicant_mobile: apiItem.mobile || '',
     applicant_address: '',
     co_applicant_name: '',
@@ -189,7 +194,7 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     reference_calling_status: apiItem.calling_statuses?.reference || 'Not Called',
     disbursement_date: apiItem.disbursement_date || '',
     loan_amount: apiItem.loan_amount || 0,
-    vehicle_status: '',
+    vehicle_status: apiItem.vehicle_status_name || '',
     amount_collected: apiItem.amount_collected || 0,
     // Map additional fields from API response
     payment_mode: apiItem.payment_mode || '',
@@ -198,7 +203,11 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     demand_calling_status: apiItem.demand_calling_status || '',
     latitude: apiItem.latitude,
     longitude: apiItem.longitude,
-    address: apiItem.address
+    address: apiItem.address,
+    repossession_date: apiItem.repossession_date || null,
+    repossession_sale_date: apiItem.repossession_sale_date || null,
+    repossession_sale_amount: apiItem.repossession_sale_amount || null,
+    current_dpd_bucket: (apiItem as any).current_dpd_bucket ?? null
   };
 }
 
@@ -339,6 +348,9 @@ export async function getApplicationsFromBackend(
   }
   if (additionalFilters.vehicleStatus && additionalFilters.vehicleStatus.length > 0) {
     params.append('vehicle_status', additionalFilters.vehicleStatus.join(','));
+  }
+  if ((additionalFilters as any).dpdBucket && (additionalFilters as any).dpdBucket.length > 0) {
+    params.append('current_dpd_bucket', (additionalFilters as any).dpdBucket.join(','));
   }
 
   const response = await fetch(`${API_BASE_URL}/applications/?${params.toString()}`, {

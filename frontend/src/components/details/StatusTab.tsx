@@ -40,7 +40,7 @@ const REPAYMENT_STATUS_OPTIONS = [
   { value: "4", label: "Overdue" },
   { value: "2", label: "Partially Paid" },
   { value: "5", label: "Foreclose" },
-  { value: "6", label: "Paid (Pending Approval)" }
+  { value: "6", label: "Paid" }
 ];
 
 // Map backend status values to frontend dropdown values
@@ -724,7 +724,28 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       
     } catch (error) {
       console.error('❌ Failed to submit status update:', error);
-      toast.error(`Failed to update status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Parse error message to show user-friendly version
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        const errorText = error.message;
+        
+        // Extract amount collected and EMI from error message
+        const amountMatch = errorText.match(/Amount collected \(([\d.]+)\)/);
+        const emiMatch = errorText.match(/EMI \(([\d.]+)\)/);
+        const statusMatch = errorText.match(/for ([^(]+)/);
+        
+        if (amountMatch && emiMatch && statusMatch) {
+          const amount = parseFloat(amountMatch[1]);
+          const emi = parseFloat(emiMatch[1]);
+          const status = statusMatch[1].trim();
+          errorMessage = `Amount collected must be >= EMI (${emi.toFixed(0)}) for ${status}`;
+        } else {
+          errorMessage = errorText;
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

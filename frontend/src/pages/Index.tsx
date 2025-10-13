@@ -41,7 +41,8 @@ const Index = () => {
     repayment: [],
     lastMonthBounce: [],
     ptpDate: [],
-    vehicleStatus: []
+    vehicleStatus: [],
+    dpdBucket: []
   });
   const [selectedEmiMonthRaw, setSelectedEmiMonthRaw] = useState(getCurrentEmiMonth());
   const [summary, setSummary] = useState(null);
@@ -127,7 +128,8 @@ const Index = () => {
       repayment: filters.repayment,
       lastMonthBounce: filters.lastMonthBounce,
       ptpDate: filters.ptpDate,
-      vehicleStatus: filters.vehicleStatus
+      vehicleStatus: filters.vehicleStatus,
+      dpdBucket: filters.dpdBucket
     };
     
     console.log('📡 Sending filter params to API:', filterParams);
@@ -159,7 +161,7 @@ const Index = () => {
         setApplications([]);
       })
       .finally(() => setLoading(false));
-  }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus]);
+  }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket]);
 
   // Fetch summary when EMI month changes
   useEffect(() => {
@@ -273,7 +275,7 @@ const Index = () => {
     console.log('Filter change - values content:', values);
     
     // Special handling for filters that should trigger fresh data fetch
-    const shouldFetchFreshData = ['ptpDate', 'repayment', 'status', 'branch', 'dealer', 'lender', 'rm', 'teamLead', 'sourceRm', 'sourceTeamLead'];
+    const shouldFetchFreshData = ['ptpDate', 'repayment', 'status', 'branch', 'dealer', 'lender', 'rm', 'teamLead', 'sourceRm', 'sourceTeamLead', 'dpdBucket'];
     
     if (shouldFetchFreshData.includes(key)) {
       console.log('🔄 Filter change requires fresh data fetch:', key);
@@ -334,6 +336,7 @@ const Index = () => {
     source_team_leads: filterOptions.source_team_leads,
     source_rms: filterOptions.source_rms,
     repayments: filterOptions.demand_num, // Map demand_num to repayments
+    dpd_buckets: filterOptions.dpd_buckets,
     lastMonthBounce: ['Not paid', 'Paid on time', '1-5 days late', '6-15 days late', '15+ days late'], // Hardcoded options
   };
 
