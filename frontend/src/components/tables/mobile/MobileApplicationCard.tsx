@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CommentsService } from "@/integrations/api/services/commentsService";
 import { COMMENT_TYPES } from "@/integrations/api/services/commentsService";
 import CallButton from "../../CallButton";
+import VehicleStatusBadge from "../../VehicleStatusBadge";
 
 
 interface MobileApplicationCardProps {
@@ -106,11 +107,7 @@ const MobileApplicationCard = memo(({
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-bold text-lg text-gray-900">{application.applicant_name}</h3>
-              {application.vehicle_status === 'Repossessed' && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                  Repossessed
-                </span>
-              )}
+              <VehicleStatusBadge vehicleStatus={application.vehicle_status} />
             </div>
             <p className="text-sm text-gray-600">ID: {application.applicant_id}</p>
           </div>

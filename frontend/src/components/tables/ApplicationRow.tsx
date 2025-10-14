@@ -7,6 +7,7 @@ import StatusBadge from "./StatusBadge";
 import ApplicationDetails from "./ApplicationDetails";
 import CallStatusDisplay from "../CallStatusDisplay";
 import CommentsDisplay from "./CommentsDisplay";
+import VehicleStatusBadge from "../VehicleStatusBadge";
 import type { BatchComment } from "@/hooks/useBatchComments";
 import type { BatchContactStatus } from "@/hooks/useBatchContactCallingStatus";
 import { CommentsService } from "@/integrations/api/services/commentsService";
@@ -103,11 +104,7 @@ const ApplicationRow = memo(({
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-bold text-blue-800">{application.applicant_name}</span>
-            {application.vehicle_status === 'Repossessed' && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                Repossessed
-              </span>
-            )}
+            <VehicleStatusBadge vehicleStatus={application.vehicle_status} />
           </div>
           <span className="text-xs text-gray-700">ID: {application.applicant_id}</span>
           <span className="text-xs text-gray-700">EMI Month: {formatEmiMonth(selectedEmiMonth ? selectedEmiMonth : application.emi_month)}</span>

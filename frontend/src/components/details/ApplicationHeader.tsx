@@ -2,23 +2,13 @@ import { CircleUser } from "lucide-react";
 import { Application } from "@/types/application";
 import { formatCurrency, formatEmiMonth } from "@/utils/formatters";
 import { Badge } from "@/components/ui/badge";
+import VehicleStatusBadge from "../VehicleStatusBadge";
 
 interface ApplicationHeaderProps {
   application: Application;
 }
 
-const VEHICLE_STATUS_COLORS: { [key: string]: string } = {
-  "Risky": "bg-yellow-500 text-white",
-  // Match Applications table/mobile badge styling (light red pill)
-  "Repossessed": "bg-red-100 text-red-800 border border-red-200",
-  "Might Need to Repossess": "bg-orange-500 text-white",
-};
-
 const ApplicationHeader = ({ application }: ApplicationHeaderProps) => {
-  const statusColor = application.vehicle_status 
-    ? VEHICLE_STATUS_COLORS[application.vehicle_status] || "bg-gray-400 text-white" 
-    : "";
-
   return (
     <div className="flex items-start gap-3 sm:gap-4">
       <div className="p-2 sm:p-3 bg-blue-100 rounded-full">
@@ -29,9 +19,7 @@ const ApplicationHeader = ({ application }: ApplicationHeaderProps) => {
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
             {application.applicant_name}
           </h3>
-          {application.vehicle_status && (
-            <Badge className={statusColor}>{application.vehicle_status}</Badge>
-          )}
+          <VehicleStatusBadge vehicleStatus={application.vehicle_status} />
         </div>
         <div className="space-y-1 text-xs sm:text-sm text-gray-600">
           {application.demand_date && (
