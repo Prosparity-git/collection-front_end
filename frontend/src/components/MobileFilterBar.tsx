@@ -17,6 +17,7 @@ interface MobileFilterBarProps {
     repayment: string[];
     lastMonthBounce: string[];
     ptpDate: string[];
+    dpdBucket: string[];
   };
   onFilterChange: (key: string, values: string[]) => void;
   availableOptions: {
@@ -32,6 +33,7 @@ interface MobileFilterBarProps {
     repayments: string[];
     lastMonthBounce: string[];
     ptpDateOptions: string[];
+    dpd_buckets?: string[];
   };
   emiMonthOptions?: string[];
   selectedEmiMonth?: string | null;
@@ -62,6 +64,7 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
     repayments: availableOptions?.repayments || [],
     lastMonthBounce: availableOptions?.lastMonthBounce || [],
     ptpDateOptions: availableOptions?.ptpDateOptions || [],
+    dpdBuckets: availableOptions?.dpd_buckets || [],
   };
 
   // Debug logging for filter options
@@ -89,6 +92,7 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
     repayment: tempFilters?.repayment || [],
     lastMonthBounce: tempFilters?.lastMonthBounce || [],
     ptpDate: tempFilters?.ptpDate || [],
+    dpdBucket: tempFilters?.dpdBucket || [],
   };
 
   // Count active filters (use applied filters for badge)
@@ -239,6 +243,17 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
               </div>
 
               <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Current DPD Bucket</label>
+                <CustomMultiSelectFilter
+                  label="Current DPD Bucket"
+                  options={safeFilterOptions.dpdBuckets}
+                  selected={safeFilters.dpdBucket}
+                  onSelectionChange={(values) => handleTempFilterChange('dpdBucket', values)}
+                  placeholder="Select DPD buckets"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700">Lenders</label>
                 <CustomMultiSelectFilter
                   label="Lenders"
@@ -289,15 +304,13 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
               >
                 Cancel
               </Button>
-              <div className="border border-blue-500 rounded-lg p-2 bg-blue-50 flex-1">
-                <Button
-                  variant="default"
-                  className="w-full px-8 py-2 text-base font-semibold"
-                  onClick={handleApplyFilters}
-                >
-                  Done
-                </Button>
-              </div>
+              <Button
+                variant="default"
+                className="flex-1 px-8 py-2 text-base font-semibold"
+                onClick={handleApplyFilters}
+              >
+                Done
+              </Button>
             </div>
           </div>
         </CollapsibleContent>
