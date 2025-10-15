@@ -484,37 +484,40 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
 
   return (
     <div className="space-y-4">
-      {/* Pre-EMI Calling Status Header */}
-      <div className="flex items-center gap-2">
-        <Phone className="h-5 w-5 text-blue-600" />
-        <h3 className="text-lg font-semibold text-gray-900">Pre-EMI Calling Status</h3>
-      </div>
-
-      {/* Pre-EMI Calling Status Card */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="space-y-2">
-            <Label htmlFor="preEmiCallingStatus" className="text-sm font-medium text-gray-700">
-              Select new pre-EMI Calling Status
-            </Label>
-            <Select 
-              value={preEmiCallingStatus || ''} 
-              onValueChange={handlePreEmiCallingStatusChange}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select pre-EMI calling status..." />
-              </SelectTrigger>
-              <SelectContent>
-                {PRE_EMI_CALLING_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Pre-EMI Calling Status - Hidden as requested */}
+      {false && (
+        <>
+          <div className="flex items-center gap-2">
+            <Phone className="h-5 w-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Pre-EMI Calling Status</h3>
           </div>
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <Label htmlFor="preEmiCallingStatus" className="text-sm font-medium text-gray-700">
+                  Select new pre-EMI Calling Status
+                </Label>
+                <Select 
+                  value={preEmiCallingStatus || ''} 
+                  onValueChange={handlePreEmiCallingStatusChange}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select pre-EMI calling status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRE_EMI_CALLING_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Header with refresh button */}
       <div className="flex items-center justify-between">
