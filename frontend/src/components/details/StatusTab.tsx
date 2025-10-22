@@ -897,7 +897,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
             </div>
 
             {/* AMOUNT COLLECTED AND PAYMENT MODE INPUTS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {/* Amount Collected */}
               <div>
                 <Label htmlFor="amount-collected">Amount Collected</Label>
@@ -930,7 +930,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   disabled={isStatusPaid}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select payment mode..." />
+                    <SelectValue placeholder="Select mode" />
                   </SelectTrigger>
                   <SelectContent>
                     {PAYMENT_MODE_OPTIONS.map((option) => (
