@@ -21,6 +21,7 @@ import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { getStatusLabel } from '@/utils/statusMapping';
 import RecentActivityCard from "./RecentActivityCard";
 import { useLoanRecentActivity } from '@/hooks/useRecentActivity';
+import { PAYMENT_MODE_OPTIONS } from '@/constants/options';
 
 interface StatusTabProps {
   application: Application;
@@ -91,7 +92,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const [formData, setFormData] = useState({
     repaymentStatus: '', // Start empty for user input
     ptpDate: '', // Start empty for user input
-    amountCollected: '' // Start empty for user input
+    amountCollected: '', // Start empty for user input
+    paymentMode: '' // Start empty for user input
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -557,9 +559,14 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       },
       ptpDate: formData.ptpDate,
       amountCollected: formData.amountCollected,
+      paymentMode: {
+        value: formData.paymentMode,
+        type: typeof formData.paymentMode,
+        label: PAYMENT_MODE_OPTIONS.find(opt => opt.value === formData.paymentMode)?.label || 'Not found'
+      },
       currentStatus: currentStatus
     });
-  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, currentStatus]);
+  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, formData.paymentMode, currentStatus]);
 
   // Debug form data on every render
   useEffect(() => {
@@ -596,7 +603,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     const hasFormData = formData.repaymentStatus || 
                        (formData.ptpDate && formData.ptpDate !== '' && formData.ptpDate !== 'clear') || 
                        formData.ptpDate === 'clear' ||
-                       (formData.amountCollected !== undefined && formData.amountCollected !== '' && formData.amountCollected !== '0');
+                       (formData.amountCollected !== undefined && formData.amountCollected !== '' && formData.amountCollected !== '0') ||
+                       formData.paymentMode;
 
     if (!hasFormData) {
       toast.error('Please fill in at least one field before submitting.');
@@ -604,7 +612,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     }
 
     // Prevent submission if status is "Paid" and user is trying to change any fields
-    if (isStatusPaid && (formData.repaymentStatus || formData.ptpDate || formData.amountCollected !== '')) {
+    if (isStatusPaid && (formData.repaymentStatus || formData.ptpDate || formData.amountCollected !== '' || formData.paymentMode)) {
       toast.error('Cannot change any fields when current status is "Paid". All fields are locked for paid applications.');
       return;
     }
@@ -628,6 +636,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         repayment_status: formData.repaymentStatus ? parseInt(formData.repaymentStatus, 10) : undefined,
         ptp_date: formData.ptpDate === 'clear' ? 'clear' : (formData.ptpDate || undefined),
         amount_collected: formData.amountCollected ? parseFloat(formData.amountCollected) : undefined,
+        payment_mode_id: formData.paymentMode ? parseInt(formData.paymentMode, 10) : undefined,
         contact_calling_status: 0, // Default value as per API schema
         contact_type: 1 // Default value as per API schema
       };
@@ -711,6 +720,17 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           'Amount Collected',
           application.amount_collected?.toString() || '0',
           formData.amountCollected.toString(),
+          '' // Empty string since month is now linked via repayment_id
+        );
+      }
+      
+      if (formData.paymentMode) {
+        const paymentModeLabel = PAYMENT_MODE_OPTIONS.find(opt => opt.value === formData.paymentMode)?.label || formData.paymentMode;
+        await addAuditLog(
+          application.applicant_id,
+          'Payment Mode',
+          'Not Set',
+          paymentModeLabel,
           '' // Empty string since month is now linked via repayment_id
         );
       }
@@ -876,26 +896,59 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
               )}
             </div>
 
-            {/* AMOUNT COLLECTED INPUT */}
-            <div>
-              <Label htmlFor="amount-collected">Amount Collected</Label>
-              <Input
-                id="amount-collected"
-                type="text"
-                value={formData.amountCollected || ''} // Ensure value is never undefined
-                onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
-                placeholder={application.amount_collected ? "Enter amount collected" : "No amount collected - enter amount above"}
-                className="mt-1"
-                disabled={isStatusPaid}
-              />
-              {!application.amount_collected && !isStatusPaid && (
-                <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
-              )}
-              {isStatusPaid && (
-                <div className="text-xs text-amber-600 mt-1">
-                  Amount collected cannot be changed when current status is "Paid"
-                </div>
-              )}
+            {/* AMOUNT COLLECTED AND PAYMENT MODE INPUTS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Amount Collected */}
+              <div>
+                <Label htmlFor="amount-collected">Amount Collected</Label>
+                <Input
+                  id="amount-collected"
+                  type="text"
+                  value={formData.amountCollected || ''} // Ensure value is never undefined
+                  onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
+                  placeholder={application.amount_collected ? "Enter amount collected" : "No amount collected - enter amount above"}
+                  className="mt-1"
+                  disabled={isStatusPaid}
+                />
+                {!application.amount_collected && !isStatusPaid && (
+                  <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
+                )}
+                {isStatusPaid && (
+                  <div className="text-xs text-amber-600 mt-1">
+                    Amount collected cannot be changed when current status is "Paid"
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Mode */}
+              <div>
+                <Label htmlFor="payment-mode">Payment Mode</Label>
+                <Select 
+                  key={`payment-mode-${formData.paymentMode}`} // Force re-render when value changes
+                  value={formData.paymentMode || ''} // Ensure value is never undefined
+                  onValueChange={(value) => handleFormFieldChange('paymentMode', value)}
+                  disabled={isStatusPaid}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select payment mode..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_MODE_OPTIONS.map((option) => (
+                      <SelectItem 
+                        key={option.value} 
+                        value={option.value}
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isStatusPaid && (
+                  <div className="text-xs text-amber-600 mt-1">
+                    Payment mode cannot be changed when current status is "Paid"
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Submit Button */}

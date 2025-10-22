@@ -10,6 +10,7 @@ export interface StatusManagementUpdate {
   repayment_status?: number;
   ptp_date?: string;
   amount_collected?: number;
+  payment_mode_id?: number; // Payment mode ID (1=Cash Collected, 2=UPI, 3=Payment Link)
   contact_type?: number; // Contact type (applicant, co_applicant, etc.)
 }
 
@@ -34,6 +35,7 @@ export interface ApplicationStatus {
   repayment_status: string | null;
   ptp_date: string | null;
   amount_collected: number | null;
+  payment_mode_id: number | null;
   contact_calling_status: string | null;
 }
 

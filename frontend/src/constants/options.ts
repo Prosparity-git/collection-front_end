@@ -24,4 +24,10 @@ export const STATUS_FILTER_OPTIONS = [
   "Paid",
   "Paid (Pending Approval)",
   "Overdue Paid"
+];
+
+export const PAYMENT_MODE_OPTIONS = [
+  { value: "1", label: "Cash Collected" },
+  { value: "2", label: "UPI" },
+  { value: "3", label: "Payment Link" }
 ]; 
