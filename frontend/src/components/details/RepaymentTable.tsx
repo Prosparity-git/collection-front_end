@@ -7,73 +7,35 @@ interface RepaymentTableProps {
   loanId: number;
 }
 
-  type PaymentStatus = 'Paid Late' | 'Paid Early' | 'Paid' | 'Overdue' | 'Overdue (Current Month)';
-
-const getPaymentStatus = (demandDate: string, paymentDate: string | null, delayDays: number): PaymentStatus => {
-  const demandDateObj = new Date(demandDate);
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-  const demandMonth = demandDateObj.getMonth();
-  const demandYear = demandDateObj.getFullYear();
-  
-  // Case 3: Both dates are the same
-  if (paymentDate && new Date(paymentDate).toDateString() === demandDateObj.toDateString()) {
-    return 'Paid';
-  }
-  
-  // Case 1: Payment exists and payment date is after demand date
-  if (paymentDate && new Date(paymentDate) > demandDateObj) {
-    return 'Paid Late';
-  }
-  
-  // Case 2: Payment exists and payment date is before demand date
-  if (paymentDate && new Date(paymentDate) < demandDateObj) {
-    return 'Paid Early';
-  }
-  
-  // Case 5: No payment, current month is same as demand date month
-  if (!paymentDate && currentMonth === demandMonth && currentYear === demandYear) {
-    return 'Overdue (Current Month)';
-  }
-  
-  // Case 4: No payment, current month is ahead of demand date month
-  if (!paymentDate && (currentYear > demandYear || (currentYear === demandYear && currentMonth > demandMonth))) {
-    return 'Overdue';
-  }
-  
-  return 'Overdue (Current Month)';
-};
-
-const getStatusColor = (status: PaymentStatus): string => {
-  switch (status) {
-    case 'Paid Late':
+const getStatusColor = (status: string): string => {
+  switch (status.toLowerCase()) {
+    case 'paid late':
       return 'text-yellow-600';
-    case 'Paid Early':
+    case 'paid early':
       return 'text-green-600';
-    case 'Paid':
+    case 'paid':
       return 'text-green-700';
-    case 'Overdue':
+    case 'overdue':
       return 'text-red-600';
-    case 'Overdue (Current Month)':
+    case 'overdue (current month)':
       return 'text-orange-600';
     default:
       return 'text-gray-600';
   }
 };
 
-const getStatusIcon = (status: PaymentStatus): string => {
+const getStatusIcon = (status: string): string => {
   // Return a colored circle emoji based on status
-  switch (status) {
-    case 'Paid Late':
+  switch (status.toLowerCase()) {
+    case 'paid late':
       return '🟡';
-    case 'Paid Early':
+    case 'paid early':
       return '🟢';
-    case 'Paid':
+    case 'paid':
       return '🟢';
-    case 'Overdue':
+    case 'overdue':
       return '🔴';
-    case 'Overdue (Current Month)':
+    case 'overdue (current month)':
       return '🟠';
     default:
       return '⚪';
@@ -175,7 +137,6 @@ const RepaymentTable: React.FC<RepaymentTableProps> = ({ loanId }) => {
                 </tr>
               ) : (
                 repaymentData.map((item, index) => {
-                  const status = getPaymentStatus(item.demand_date, item.payment_date, item.delay_days);
                   return (
                     <tr key={item.payment_id} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
                       <td className="py-2 px-3 text-xs sm:text-sm font-medium text-gray-900">{item.demand_num}</td>
@@ -188,8 +149,8 @@ const RepaymentTable: React.FC<RepaymentTableProps> = ({ loanId }) => {
                       </td>
                       <td className="py-2 px-3 text-xs sm:text-sm font-medium text-gray-900">{formatAmount(item.overdue_amount)}</td>
                       <td className="py-2 px-3 text-xs sm:text-sm">
-                        <span className={`font-medium text-[10px] sm:text-xs ${getStatusColor(status)}`}>
-                          {status}
+                        <span className={`font-medium text-[10px] sm:text-xs ${getStatusColor(item.status)}`}>
+                          {item.status}
                         </span>
                       </td>
                     </tr>

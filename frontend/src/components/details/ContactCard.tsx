@@ -13,6 +13,7 @@ interface ContactCardProps {
   onStatusChange: (status: string) => void;
   showCallingStatus?: boolean;
   contactTypeId?: number; // Add contact type ID
+  relationship?: string | null; // Add relationship field
 }
 
 const ContactCard = ({ 
@@ -22,7 +23,8 @@ const ContactCard = ({
   email, 
   currentStatus, 
   onStatusChange,
-  showCallingStatus = false 
+  showCallingStatus = false,
+  relationship 
 }: ContactCardProps) => {
   // Debug logging to track status changes
   console.log(`🔄 ContactCard (${title}): Rendering with currentStatus:`, currentStatus);
@@ -35,7 +37,14 @@ const ContactCard = ({
             <User className="h-4 w-4 text-blue-600" />
             <h4 className="font-semibold text-gray-900 text-sm">{title}</h4>
           </div>
-          <p className="text-sm font-medium text-gray-800 break-words mb-2">{name}</p>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <p className="text-sm font-medium text-gray-800 break-words">{name}</p>
+            {relationship && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 capitalize">
+                {relationship}
+              </span>
+            )}
+          </div>
           
           <div className="space-y-1">
             {mobile && (

@@ -7,6 +7,7 @@ export interface ContactInfo {
   phone: string | null;
   email: string | null;
   type: string;
+  relationship?: string | null;
 }
 
 export interface ApplicationContactsResponse {

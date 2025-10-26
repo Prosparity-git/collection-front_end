@@ -611,6 +611,26 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       return;
     }
 
+    // Validate: If amount collected is entered, payment mode must be selected
+    const hasAmountCollected = formData.amountCollected !== undefined && 
+                                formData.amountCollected !== '' && 
+                                formData.amountCollected !== '0';
+    const hasPaymentMode = formData.paymentMode && formData.paymentMode !== '';
+    
+    // Validate amount is a valid number
+    if (hasAmountCollected) {
+      const amountValue = parseFloat(formData.amountCollected);
+      if (isNaN(amountValue) || !isFinite(amountValue) || amountValue <= 0) {
+        toast.error('Please enter a valid amount greater than 0.');
+        return;
+      }
+    }
+    
+    if (hasAmountCollected && !hasPaymentMode) {
+      toast.error('Please select a Payment Mode when entering an Amount Collected value.');
+      return;
+    }
+
     // Prevent submission if status is "Paid" and user is trying to change any fields
     if (isStatusPaid && (formData.repaymentStatus || formData.ptpDate || formData.amountCollected !== '' || formData.paymentMode)) {
       toast.error('Cannot change any fields when current status is "Paid". All fields are locked for paid applications.');
@@ -629,13 +649,26 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       
       console.log('🔍 StatusTab: Using payment_id:', repaymentId, 'for month:', selectedMonth, 'application:', application.applicant_id);
       
+      // Calculate total amount collected (existing + new)
+      let totalAmountCollected: number | undefined = undefined;
+      if (formData.amountCollected && formData.amountCollected !== '' && formData.amountCollected !== '0') {
+        const existingAmount = application.amount_collected || 0;
+        const newAmount = parseFloat(formData.amountCollected);
+        totalAmountCollected = existingAmount + newAmount;
+        console.log('💰 Amount calculation:', {
+          existingAmount,
+          newAmount,
+          totalAmountCollected
+        });
+      }
+      
       // Prepare the request payload according to the new API schema
       const statusUpdatePayload = {
         repayment_id: repaymentId,
         calling_type: 2, // 2 for demand calling
         repayment_status: formData.repaymentStatus ? parseInt(formData.repaymentStatus, 10) : undefined,
         ptp_date: formData.ptpDate === 'clear' ? 'clear' : (formData.ptpDate || undefined),
-        amount_collected: formData.amountCollected ? parseFloat(formData.amountCollected) : undefined,
+        amount_collected: totalAmountCollected,
         payment_mode_id: formData.paymentMode ? parseInt(formData.paymentMode, 10) : undefined,
         contact_calling_status: 0, // Default value as per API schema
         contact_type: 1 // Default value as per API schema
@@ -683,9 +716,13 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         }
       }
       if (formData.amountCollected !== undefined) {
-        setAmountCollected(formData.amountCollected);
-        // Notify realtime updates
-        notifyAmountCollectedUpdate(application.applicant_id, parseFloat(formData.amountCollected));
+        // Update with the total amount (existing + new)
+        const existingAmount = application.amount_collected || 0;
+        const newAmount = parseFloat(formData.amountCollected);
+        const totalAmount = existingAmount + newAmount;
+        setAmountCollected(totalAmount.toString());
+        // Notify realtime updates with the new total
+        notifyAmountCollectedUpdate(application.applicant_id, totalAmount);
       }
 
       // Add audit logs for changed fields
@@ -714,12 +751,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         );
       }
       
-      if (formData.amountCollected !== undefined && formData.amountCollected !== (application.amount_collected?.toString() || '0')) {
+      if (formData.amountCollected !== undefined && formData.amountCollected !== '') {
+        const previousTotal = application.amount_collected || 0;
+        const newAmountAdded = parseFloat(formData.amountCollected);
+        const newTotal = previousTotal + newAmountAdded;
+        
         await addAuditLog(
           application.applicant_id,
           'Amount Collected',
-          application.amount_collected?.toString() || '0',
-          formData.amountCollected.toString(),
+          `₹${previousTotal.toLocaleString('en-IN')} (Added: ₹${newAmountAdded.toLocaleString('en-IN')})`,
+          `₹${newTotal.toLocaleString('en-IN')}`,
           '' // Empty string since month is now linked via repayment_id
         );
       }
@@ -910,14 +951,56 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   className="mt-1"
                   disabled={isStatusPaid}
                 />
-                {!application.amount_collected && !isStatusPaid && (
-                  <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
-                )}
-                {isStatusPaid && (
-                  <div className="text-xs text-amber-600 mt-1">
-                    Amount collected cannot be changed when current status is "Paid"
-                  </div>
-                )}
+                {(() => {
+                  // Calculate new total if user has entered an amount
+                  const existingAmount = application.amount_collected || 0;
+                  const newAmount = formData.amountCollected ? parseFloat(formData.amountCollected) : 0;
+                  const newTotal = existingAmount + newAmount;
+                  
+                  // Check if the entered value is valid
+                  const isValidAmount = !isNaN(newAmount) && isFinite(newAmount) && newAmount > 0;
+                  
+                  // Show the calculation only when user has entered a valid value
+                  if (formData.amountCollected && formData.amountCollected !== '' && formData.amountCollected !== '0' && isValidAmount) {
+                    return (
+                      <>
+                        <div className="text-xs text-blue-600 mt-1 font-medium">
+                          New total will be: ₹{newTotal.toLocaleString('en-IN')}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Amount will be added to existing total
+                        </div>
+                      </>
+                    );
+                  }
+                  
+                  // Show error for invalid amount
+                  if (formData.amountCollected && formData.amountCollected !== '' && !isValidAmount) {
+                    return (
+                      <div className="text-xs text-red-600 mt-1">
+                        Please enter a valid amount
+                      </div>
+                    );
+                  }
+                  
+                  // Default placeholder text when no amount entered
+                  if (!application.amount_collected && !isStatusPaid && (!formData.amountCollected || formData.amountCollected === '')) {
+                    return (
+                      <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
+                    );
+                  }
+                  
+                  // Locked status message
+                  if (isStatusPaid) {
+                    return (
+                      <div className="text-xs text-amber-600 mt-1">
+                        Amount collected cannot be changed when current status is "Paid"
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
               </div>
 
               {/* Payment Mode */}

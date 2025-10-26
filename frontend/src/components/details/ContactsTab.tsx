@@ -290,7 +290,8 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
         mobile: coApp.phone,
         email: coApp.email,
         callingStatus: localContactStatuses.co_applicant || '3',
-        contactTypeId: 2 // 2 for Co-Applicant
+        contactTypeId: 2, // 2 for Co-Applicant
+        relationship: coApp.relationship
       })) || [],
       ...apiContacts.guarantors?.map((guarantor, index) => ({
         type: "guarantor",
@@ -299,7 +300,8 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
         mobile: guarantor.phone,
         email: guarantor.email,
         callingStatus: localContactStatuses.guarantor || '3',
-        contactTypeId: 3 // 3 for Guarantor
+        contactTypeId: 3, // 3 for Guarantor
+        relationship: guarantor.relationship
       })) || [],
       ...apiContacts.references?.map((reference, index) => ({
         type: "reference",
@@ -308,7 +310,8 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
         mobile: reference.phone,
         email: reference.email,
         callingStatus: localContactStatuses.reference || '3',
-        contactTypeId: 4 // 4 for Reference
+        contactTypeId: 4, // 4 for Reference
+        relationship: reference.relationship
       })) || []
     ];
 
@@ -584,6 +587,7 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
               onStatusChange={() => {}} // Dummy function since we're not showing calling status
               contactTypeId={contact.contactTypeId}
               showCallingStatus={false}
+              relationship={(contact as any).relationship}
             />
           ))}
         </div>
