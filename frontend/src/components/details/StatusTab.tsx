@@ -975,7 +975,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 />
                 {/* Show total amount in smaller text below the input */}
                 {application.amount_collected && application.amount_collected > 0 && (
-                  <div className="text-xs text-gray-600 mt-1">
+                  <div className="text-sm text-gray-600 mt-1">
                     Total: ₹{application.amount_collected.toLocaleString('en-IN')}
                   </div>
                 )}

@@ -41,7 +41,7 @@ const ContactCard = ({
             <p className="text-sm font-medium text-gray-800 break-words">{name}</p>
             {relationship && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 capitalize">
-                {relationship}
+                {(String(relationship) === '1' || (typeof relationship === 'string' && relationship.toLowerCase() === 'spouse')) ? 'Spouse' : relationship}
               </span>
             )}
           </div>
