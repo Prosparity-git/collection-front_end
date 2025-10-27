@@ -99,8 +99,21 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Check if status is "Paid" to disable demand and repayment status fields
+  // Only lock when current status from API is "Paid", NOT when user is just selecting "Paid" in the form
   const isStatusPaid = useMemo(() => {
-    return currentStatus === '3' || currentStatus === 'Paid';
+    const isPaid = currentStatus === '3' || 
+           currentStatus === 'Paid' || 
+           currentStatus === '6' ||
+           currentStatus.toLowerCase().includes('paid');
+    
+    if (isPaid) {
+      console.log('🔒 StatusTab: Status is "Paid" - locking all fields', {
+        currentStatus,
+        repaymentStatus: formData.repaymentStatus
+      });
+    }
+    
+    return isPaid;
   }, [currentStatus]);
 
   // Set form data based on current status when status changes
@@ -699,11 +712,14 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       
       // Update local state
       if (formData.repaymentStatus) {
-        setCurrentStatus(formData.repaymentStatus);
-        onStatusChange(formData.repaymentStatus);
+        // Get the status label from the options in this file (e.g., "Paid" for "6")
+        const statusOption = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === formData.repaymentStatus);
+        const statusLabel = statusOption?.label || formData.repaymentStatus;
         
-        // Get the status label for realtime updates
-        const statusLabel = getStatusLabel(formData.repaymentStatus);
+        // Set currentStatus to the label, not the numeric value
+        // This ensures the "Paid" lock is triggered after successful submission
+        setCurrentStatus(statusLabel);
+        onStatusChange(formData.repaymentStatus);
         
         // Notify realtime updates with the label instead of integer
         notifyStatusUpdate(application.applicant_id, statusLabel);
