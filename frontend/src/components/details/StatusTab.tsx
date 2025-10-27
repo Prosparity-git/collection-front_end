@@ -81,7 +81,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const [ptpDate, setPtpDate] = useState('');
   const [showLogDialog, setShowLogDialog] = useState(false);
   const { user } = useAuth();
-  const [amountCollected, setAmountCollected] = useState<string>(application.amount_collected?.toString() ?? '');
+  const [amountCollected, setAmountCollected] = useState<string>(''); // Start empty for user input, don't show API value
   const { fetchFieldStatus, updateFieldStatus } = useFieldStatus();
   const [currentStatus, setCurrentStatus] = useState<string>('Not Set');
   const { notifyStatusUpdate, notifyPtpDateUpdate, notifyAmountCollectedUpdate } = useRealtimeUpdates();
@@ -264,13 +264,15 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     }
     
     // Initialize Amount Collected from application payload
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ Setting amount collected from API:', amountString);
-        updates.amountCollected = amountString;
-      }
-    }
+    // Don't set the field with existing amount - keep it empty for user input
+    // Only use the API value for calculation purposes, not for displaying in the input field
+    // if (application.amount_collected !== undefined && application.amount_collected !== null) {
+    //   const amountString = application.amount_collected.toString();
+    //   if (amountString !== '0') {
+    //     console.log('✅ Setting amount collected from API:', amountString);
+    //     updates.amountCollected = amountString;
+    //   }
+    // }
     
     // Update form data with all collected updates
     if (Object.keys(updates).length > 0) {
@@ -343,18 +345,20 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     }
     
     // Update Amount Collected when application data changes
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ Updating amount collected from application change:', amountString);
-        updates.amountCollected = amountString;
-      } else {
-        updates.amountCollected = '';
-      }
-    } else {
-      // Clear amount collected if not available
-      updates.amountCollected = '';
-    }
+    // Don't set the field with existing amount - keep it empty for user input
+    // Only use the API value for calculation purposes, not for displaying in the input field
+    // if (application.amount_collected !== undefined && application.amount_collected !== null) {
+    //   const amountString = application.amount_collected.toString();
+    //   if (amountString !== '0') {
+    //     console.log('✅ Updating amount collected from application change:', amountString);
+    //     updates.amountCollected = amountString;
+    //   } else {
+    //     updates.amountCollected = '';
+    //   }
+    // } else {
+    //   // Clear amount collected if not available
+    //   updates.amountCollected = '';
+    // }
     
     // Update form data with all collected updates
     if (Object.keys(updates).length > 0) {
@@ -472,31 +476,33 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   }, [application.applicant_id, selectedMonth, monthlyData]);
 
   // Initialize amount collected from application data with proper synchronization
-  useEffect(() => {
-    console.log('💰 StatusTab: Initializing amount collected from API:', {
-      apiValue: application.amount_collected,
-      type: typeof application.amount_collected,
-      currentFormValue: formData.amountCollected
-    });
-    
-    // Only set the display state, NOT the form input field
-    // Form field should remain independent for user input
-    // This ensures users can type new values without them being overridden by API data
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ StatusTab: Setting amount collected display from API:', amountString);
-        setAmountCollected(amountString);
-        // Don't update formData.amountCollected - keep it independent
-      } else {
-        console.log('⚠️ StatusTab: API amount is 0 or empty, setting display to empty');
-        setAmountCollected('');
-      }
-    } else {
-      console.log('⚠️ StatusTab: No amount collected in API, setting display to empty');
-      setAmountCollected('');
-    }
-  }, [application.amount_collected, selectedMonth]);
+  // Don't set the field with existing amount - keep it empty for user input
+  // Only use the API value for calculation purposes, not for displaying in the input field
+  // useEffect(() => {
+  //   console.log('💰 StatusTab: Initializing amount collected from API:', {
+  //     apiValue: application.amount_collected,
+  //     type: typeof application.amount_collected,
+  //     currentFormValue: formData.amountCollected
+  //   });
+  //   
+  //   // Only set the display state, NOT the form input field
+  //   // Form field should remain independent for user input
+  //   // This ensures users can type new values without them being overridden by API data
+  //   if (application.amount_collected !== undefined && application.amount_collected !== null) {
+  //     const amountString = application.amount_collected.toString();
+  //     if (amountString !== '0') {
+  //       console.log('✅ StatusTab: Setting amount collected display from API:', amountString);
+  //       setAmountCollected(amountString);
+  //       // Don't update formData.amountCollected - keep it independent
+  //     } else {
+  //       console.log('⚠️ StatusTab: API amount is 0 or empty, setting display to empty');
+  //       setAmountCollected('');
+  //     }
+  //   } else {
+  //     console.log('⚠️ StatusTab: No amount collected in API, setting display to empty');
+  //     setAmountCollected('');
+  //   }
+  // }, [application.amount_collected, selectedMonth]);
   
   // Debug application data changes
   useEffect(() => {
@@ -947,10 +953,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   type="text"
                   value={formData.amountCollected || ''} // Ensure value is never undefined
                   onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
-                  placeholder={application.amount_collected ? "Enter amount collected" : "No amount collected - enter amount above"}
+                  placeholder="Enter amount"
                   className="mt-1"
                   disabled={isStatusPaid}
                 />
+                {/* Show total amount in smaller text below the input */}
+                {application.amount_collected && application.amount_collected > 0 && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    Total: ₹{application.amount_collected.toLocaleString('en-IN')}
+                  </div>
+                )}
                 {(() => {
                   // Calculate new total if user has entered an amount
                   const existingAmount = application.amount_collected || 0;
