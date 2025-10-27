@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import AppHeader from "@/components/layout/AppHeader";
 import FiltersSection from "@/components/layout/FiltersSection";
 import MainContent from "@/components/layout/MainContent";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import StatusCards from "@/components/StatusCards";
 import { ApplicationTableSkeleton, StatusCardsSkeleton } from "@/components/LoadingStates";
 import PendingApprovals from "@/components/PendingApprovals";
@@ -401,7 +400,6 @@ const Index = () => {
           />
         </div>
       </div>
-      <PWAInstallPrompt />
       {selectedApplication && (
         <>
           <div 

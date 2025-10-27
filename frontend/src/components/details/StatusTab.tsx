@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Application } from "@/types/application";
 import { AuditLog } from "@/hooks/useAuditLogs";
 import { format } from "date-fns";
-import { History, Clock, AlertCircle, Save } from "lucide-react";
+import { History, Clock, Save, AlertCircle } from "lucide-react";
 import { useFilteredAuditLogs } from "@/hooks/useFilteredAuditLogs";
 import { toast } from "sonner";
 import LogDialog from "./LogDialog";
@@ -80,7 +80,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const [ptpDate, setPtpDate] = useState('');
   const [showLogDialog, setShowLogDialog] = useState(false);
   const { user } = useAuth();
-  const [amountCollected, setAmountCollected] = useState<string>(application.amount_collected?.toString() ?? '');
+  const [amountCollected, setAmountCollected] = useState<string>(''); // Start empty for user input, don't show API value
   const { fetchFieldStatus, updateFieldStatus } = useFieldStatus();
   const [currentStatus, setCurrentStatus] = useState<string>('Not Set');
   const { notifyStatusUpdate, notifyPtpDateUpdate, notifyAmountCollectedUpdate } = useRealtimeUpdates();
@@ -91,15 +91,34 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   const [formData, setFormData] = useState({
     repaymentStatus: '', // Start empty for user input
     ptpDate: '', // Start empty for user input
-    amountCollected: '' // Start empty for user input
+    amountCollected: '', // Start empty for user input
+    paymentMode: '' // Start empty for user input
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Check if status is "Paid" to disable demand and repayment status fields
-  const isStatusPaid = useMemo(() => {
-    return currentStatus === '3' || currentStatus === 'Paid';
-  }, [currentStatus]);
+  // Check if status should be locked based on API response
+  const isLocked = useMemo(() => {
+    const status = application.status || currentStatus;
+    const normalizedStatus = status.toLowerCase().trim();
+    
+    // Check if status is numeric "6" (which represents "Paid (Pending Approval)")
+    const isNumericStatus6 = status === '6' || currentStatus === '6';
+    
+    // Lock if status is "Paid", "paid rejected", "paid pending approval", or numeric "6"
+    const shouldLock = normalizedStatus === 'paid' || 
+                       normalizedStatus === 'paid rejected' ||
+                       normalizedStatus === 'paid pending approval' ||
+                       normalizedStatus.includes('paid rejected') ||
+                       normalizedStatus.includes('paid pending approval') ||
+                       normalizedStatus.includes('paid(pending approval)') ||
+                       (normalizedStatus.includes('paid') && !normalizedStatus.includes('partially')) ||
+                       isNumericStatus6;
+    
+    console.log('🔒 Status lock check:', { status, normalizedStatus, currentStatus, isNumericStatus6, shouldLock });
+    
+    return shouldLock;
+  }, [application.status, currentStatus]);
 
   // Set form data based on current status when status changes
   useEffect(() => {
@@ -262,13 +281,15 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     }
     
     // Initialize Amount Collected from application payload
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ Setting amount collected from API:', amountString);
-        updates.amountCollected = amountString;
-      }
-    }
+    // Don't set the field with existing amount - keep it empty for user input
+    // Only use the API value for calculation purposes, not for displaying in the input field
+    // if (application.amount_collected !== undefined && application.amount_collected !== null) {
+    //   const amountString = application.amount_collected.toString();
+    //   if (amountString !== '0') {
+    //     console.log('✅ Setting amount collected from API:', amountString);
+    //     updates.amountCollected = amountString;
+    //   }
+    // }
     
     // Update form data with all collected updates
     if (Object.keys(updates).length > 0) {
@@ -341,18 +362,20 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     }
     
     // Update Amount Collected when application data changes
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ Updating amount collected from application change:', amountString);
-        updates.amountCollected = amountString;
-      } else {
-        updates.amountCollected = '';
-      }
-    } else {
-      // Clear amount collected if not available
-      updates.amountCollected = '';
-    }
+    // Don't set the field with existing amount - keep it empty for user input
+    // Only use the API value for calculation purposes, not for displaying in the input field
+    // if (application.amount_collected !== undefined && application.amount_collected !== null) {
+    //   const amountString = application.amount_collected.toString();
+    //   if (amountString !== '0') {
+    //     console.log('✅ Updating amount collected from application change:', amountString);
+    //     updates.amountCollected = amountString;
+    //   } else {
+    //     updates.amountCollected = '';
+    //   }
+    // } else {
+    //   // Clear amount collected if not available
+    //   updates.amountCollected = '';
+    // }
     
     // Update form data with all collected updates
     if (Object.keys(updates).length > 0) {
@@ -470,31 +493,33 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   }, [application.applicant_id, selectedMonth, monthlyData]);
 
   // Initialize amount collected from application data with proper synchronization
-  useEffect(() => {
-    console.log('💰 StatusTab: Initializing amount collected from API:', {
-      apiValue: application.amount_collected,
-      type: typeof application.amount_collected,
-      currentFormValue: formData.amountCollected
-    });
-    
-    // Only set the display state, NOT the form input field
-    // Form field should remain independent for user input
-    // This ensures users can type new values without them being overridden by API data
-    if (application.amount_collected !== undefined && application.amount_collected !== null) {
-      const amountString = application.amount_collected.toString();
-      if (amountString !== '0') {
-        console.log('✅ StatusTab: Setting amount collected display from API:', amountString);
-        setAmountCollected(amountString);
-        // Don't update formData.amountCollected - keep it independent
-      } else {
-        console.log('⚠️ StatusTab: API amount is 0 or empty, setting display to empty');
-        setAmountCollected('');
-      }
-    } else {
-      console.log('⚠️ StatusTab: No amount collected in API, setting display to empty');
-      setAmountCollected('');
-    }
-  }, [application.amount_collected, selectedMonth]);
+  // Don't set the field with existing amount - keep it empty for user input
+  // Only use the API value for calculation purposes, not for displaying in the input field
+  // useEffect(() => {
+  //   console.log('💰 StatusTab: Initializing amount collected from API:', {
+  //     apiValue: application.amount_collected,
+  //     type: typeof application.amount_collected,
+  //     currentFormValue: formData.amountCollected
+  //   });
+  //   
+  //   // Only set the display state, NOT the form input field
+  //   // Form field should remain independent for user input
+  //   // This ensures users can type new values without them being overridden by API data
+  //   if (application.amount_collected !== undefined && application.amount_collected !== null) {
+  //     const amountString = application.amount_collected.toString();
+  //     if (amountString !== '0') {
+  //       console.log('✅ StatusTab: Setting amount collected display from API:', amountString);
+  //       setAmountCollected(amountString);
+  //       // Don't update formData.amountCollected - keep it independent
+  //     } else {
+  //       console.log('⚠️ StatusTab: API amount is 0 or empty, setting display to empty');
+  //       setAmountCollected('');
+  //     }
+  //   } else {
+  //     console.log('⚠️ StatusTab: No amount collected in API, setting display to empty');
+  //     setAmountCollected('');
+  //   }
+  // }, [application.amount_collected, selectedMonth]);
   
   // Debug application data changes
   useEffect(() => {
@@ -603,9 +628,22 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       return;
     }
 
-    // Prevent submission if status is "Paid" and user is trying to change any fields
-    if (isStatusPaid && (formData.repaymentStatus || formData.ptpDate || formData.amountCollected !== '')) {
-      toast.error('Cannot change any fields when current status is "Paid". All fields are locked for paid applications.');
+    // Validate amount is a valid number
+    const hasAmountCollected = formData.amountCollected !== undefined && 
+                                formData.amountCollected !== '' && 
+                                formData.amountCollected !== '0';
+    
+    if (hasAmountCollected) {
+      const amountValue = parseFloat(formData.amountCollected);
+      if (isNaN(amountValue) || !isFinite(amountValue) || amountValue <= 0) {
+        toast.error('Please enter a valid amount greater than 0.');
+        return;
+      }
+    }
+
+    // Prevent submission if status is locked
+    if (isLocked) {
+      toast.error('Cannot change fields when status is "Paid". All fields are locked.');
       return;
     }
 
@@ -621,13 +659,22 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       
       console.log('🔍 StatusTab: Using payment_id:', repaymentId, 'for month:', selectedMonth, 'application:', application.applicant_id);
       
+      // Send ONLY the new amount entered by the user, NOT the total
+      let newAmountCollected: number | undefined = undefined;
+      if (formData.amountCollected && formData.amountCollected !== '' && formData.amountCollected !== '0') {
+        newAmountCollected = parseFloat(formData.amountCollected);
+        console.log('💰 Sending new amount to backend:', {
+          newAmountEntered: newAmountCollected
+        });
+      }
+      
       // Prepare the request payload according to the new API schema
       const statusUpdatePayload = {
         repayment_id: repaymentId,
         calling_type: 2, // 2 for demand calling
         repayment_status: formData.repaymentStatus ? parseInt(formData.repaymentStatus, 10) : undefined,
         ptp_date: formData.ptpDate === 'clear' ? 'clear' : (formData.ptpDate || undefined),
-        amount_collected: formData.amountCollected ? parseFloat(formData.amountCollected) : undefined,
+        amount_collected: newAmountCollected,
         contact_calling_status: 0, // Default value as per API schema
         contact_type: 1 // Default value as per API schema
       };
@@ -649,16 +696,30 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
 
       console.log('✅ Status update successful:', result);
       
-      // Update local state
+      // Update local state - backend should return the updated status
+      // currentStatus will be updated automatically via the useEffect that watches application.status
       if (formData.repaymentStatus) {
-        setCurrentStatus(formData.repaymentStatus);
-        onStatusChange(formData.repaymentStatus);
+        // Use the actual backend response status if available, otherwise fallback to form data
+        const backendStatus = result?.new_status?.repayment_status || formData.repaymentStatus;
         
-        // Get the status label for realtime updates
-        const statusLabel = getStatusLabel(formData.repaymentStatus);
+        // Get the status label from the options in this file (e.g., "Paid (Pending Approval)" for "6")
+        const statusOption = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === backendStatus);
+        const statusLabel = statusOption?.label || backendStatus;
         
-        // Notify realtime updates with the label instead of integer
-        notifyStatusUpdate(application.applicant_id, statusLabel);
+        // Update currentStatus immediately for real-time locking
+        // This will lock the fields immediately after submission without waiting for useEffect
+        setCurrentStatus(backendStatus);
+        
+        // Also update application.status to ensure the lock persists
+        // This is needed because isLocked checks both application.status and currentStatus
+        (application as any).status = backendStatus;
+        
+        // Pass the backend status (which will be "6" for "Paid" submission) to onStatusChange
+        // The parent component will use this to update the application status in the table
+        onStatusChange(backendStatus);
+        
+        // Notify realtime updates - use the backend response status which will be "6" for "Paid"
+        notifyStatusUpdate(application.applicant_id, backendStatus);
       }
       if (formData.ptpDate) {
         if (formData.ptpDate === 'clear') {
@@ -674,9 +735,24 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         }
       }
       if (formData.amountCollected !== undefined) {
-        setAmountCollected(formData.amountCollected);
-        // Notify realtime updates
-        notifyAmountCollectedUpdate(application.applicant_id, parseFloat(formData.amountCollected));
+        // Backend returns the updated total amount after adding the new amount
+        // Use the backend response if available, otherwise calculate locally for display
+        const newAmount = parseFloat(formData.amountCollected);
+        const existingAmount = application.amount_collected || 0;
+        const totalAmount = existingAmount + newAmount;
+        
+        // Clear the form fields so user can enter a new amount next time
+        // Backend response will have the updated total
+        setAmountCollected('');
+        
+        // Clear the formData fields as well to reset the inputs
+        setFormData(prev => ({
+          ...prev,
+          amountCollected: ''
+        }));
+        
+        // Notify realtime updates with the new total
+        notifyAmountCollectedUpdate(application.applicant_id, totalAmount);
       }
 
       // Add audit logs for changed fields
@@ -684,7 +760,9 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       
       if (formData.repaymentStatus && formData.repaymentStatus !== currentStatus) {
         const oldLabel = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === currentStatus)?.label || currentStatus;
-        const newLabel = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === formData.repaymentStatus)?.label || formData.repaymentStatus;
+        // Use the actual backend response status if available, otherwise map the dropdown value
+        const backendStatus = result?.new_status?.repayment_status || formData.repaymentStatus;
+        const newLabel = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === backendStatus)?.label || backendStatus;
         
         await addAuditLog(
           application.applicant_id,
@@ -705,12 +783,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         );
       }
       
-      if (formData.amountCollected !== undefined && formData.amountCollected !== (application.amount_collected?.toString() || '0')) {
+      if (formData.amountCollected !== undefined && formData.amountCollected !== '') {
+        const previousTotal = application.amount_collected || 0;
+        const newAmountAdded = parseFloat(formData.amountCollected);
+        const newTotal = previousTotal + newAmountAdded;
+        
         await addAuditLog(
           application.applicant_id,
           'Amount Collected',
-          application.amount_collected?.toString() || '0',
-          formData.amountCollected.toString(),
+          `₹${previousTotal.toLocaleString('en-IN')} (Added: ₹${newAmountAdded.toLocaleString('en-IN')})`,
+          `₹${newTotal.toLocaleString('en-IN')}`,
           '' // Empty string since month is now linked via repayment_id
         );
       }
@@ -791,7 +873,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           <CardTitle className="text-sm">Status Management</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          {isStatusPaid && (
+          {isLocked && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-center gap-2 text-amber-800">
                 <AlertCircle className="h-4 w-4" />
@@ -812,7 +894,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 key={`repayment-${formData.repaymentStatus}`} // Force re-render when value changes
                 value={formData.repaymentStatus || ''} // Ensure value is never undefined
                 onValueChange={(value) => handleFormFieldChange('repaymentStatus', value)}
-                disabled={isStatusPaid}
+                disabled={isLocked}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder={
@@ -834,11 +916,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   ))}
                 </SelectContent>
               </Select>
-              {isStatusPaid && (
-                <div className="text-xs text-amber-600 mt-1">
-                  Repayment status cannot be changed when current status is "Paid"
-                </div>
-              )}
             </div>
             
             {/* PTP DATE INPUT */}
@@ -853,30 +930,25 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   onChange={(e) => handleFormFieldChange('ptpDate', e.target.value)}
                   className="flex-1"
                   placeholder={application.ptp_date ? "Select PTP date" : "No PTP date set - select a date"}
-                  disabled={isStatusPaid}
+                  disabled={isLocked}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => handleFormFieldChange('ptpDate', 'clear')}
-                  disabled={isStatusPaid}
                   className="px-3"
+                  disabled={isLocked}
                 >
                   Clear
                 </Button>
               </div>
-              {!application.ptp_date && !isStatusPaid && (
+              {!application.ptp_date && (
                 <div className="text-xs text-gray-500">No PTP date set - enter a date above or click Clear</div>
-              )}
-              {isStatusPaid && (
-                <div className="text-xs text-amber-600 mt-1">
-                  PTP date cannot be changed when current status is "Paid"
-                </div>
               )}
             </div>
 
-            {/* AMOUNT COLLECTED INPUT */}
+            {/* AMOUNT COLLECTED */}
             <div>
               <Label htmlFor="amount-collected">Amount Collected</Label>
               <Input
@@ -884,25 +956,61 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 type="text"
                 value={formData.amountCollected || ''} // Ensure value is never undefined
                 onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
-                placeholder={application.amount_collected ? "Enter amount collected" : "No amount collected - enter amount above"}
+                placeholder="Enter amount"
                 className="mt-1"
-                disabled={isStatusPaid}
+                disabled={isLocked}
               />
-              {!application.amount_collected && !isStatusPaid && (
-                <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
-              )}
-              {isStatusPaid && (
-                <div className="text-xs text-amber-600 mt-1">
-                  Amount collected cannot be changed when current status is "Paid"
+              {/* Show total amount in smaller text below the input */}
+              {application.amount_collected && application.amount_collected > 0 && (
+                <div className="text-sm text-gray-600 mt-1">
+                  EMI Paid so far: ₹{application.amount_collected.toLocaleString('en-IN')}
                 </div>
               )}
+              {(() => {
+                // Calculate new total if user has entered an amount
+                const existingAmount = application.amount_collected || 0;
+                const newAmount = formData.amountCollected ? parseFloat(formData.amountCollected) : 0;
+                const newTotal = existingAmount + newAmount;
+                
+                // Check if the entered value is valid
+                const isValidAmount = !isNaN(newAmount) && isFinite(newAmount) && newAmount > 0;
+                
+                // Show the calculation only when user has entered a valid value
+                if (formData.amountCollected && formData.amountCollected !== '' && formData.amountCollected !== '0' && isValidAmount) {
+                  return (
+                    <>
+                      <div className="text-sm text-blue-600 mt-1 font-medium">
+                        EMI paid after this payment: ₹{newTotal.toLocaleString('en-IN')}
+                      </div>
+                    </>
+                  );
+                }
+                
+                // Show error for invalid amount
+                if (formData.amountCollected && formData.amountCollected !== '' && !isValidAmount) {
+                  return (
+                    <div className="text-xs text-red-600 mt-1">
+                      Please enter a valid amount
+                    </div>
+                  );
+                }
+                
+                // Default placeholder text when no amount entered
+                if (!application.amount_collected && (!formData.amountCollected || formData.amountCollected === '')) {
+                  return (
+                    <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
+                  );
+                }
+                
+                return null;
+              })()}
             </div>
 
             {/* Submit Button */}
             <div className="pt-4">
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || isStatusPaid}
+                disabled={isSubmitting || isLocked}
                 className="w-full"
                 size="lg"
               >
@@ -910,11 +1018,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Updating Status...
-                  </>
-                ) : isStatusPaid ? (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    No Changes Allowed
                   </>
                 ) : (
                   <>

@@ -8,6 +8,7 @@ export interface DelayCalculationResult {
   payment_date: string | null;
   delay_days: number;
   overdue_amount: number;
+  status: string;
 }
 
 export interface DelayCalculationResponse {
