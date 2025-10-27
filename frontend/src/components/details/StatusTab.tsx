@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Application } from "@/types/application";
 import { AuditLog } from "@/hooks/useAuditLogs";
 import { format } from "date-fns";
-import { History, Clock, AlertCircle, Save } from "lucide-react";
+import { History, Clock, Save, AlertCircle } from "lucide-react";
 import { useFilteredAuditLogs } from "@/hooks/useFilteredAuditLogs";
 import { toast } from "sonner";
 import LogDialog from "./LogDialog";
@@ -98,31 +98,28 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Check if status is "Paid" to disable demand and repayment status fields
-  // Only lock when backend status is ALREADY "Paid(pending approval)", NOT when user is selecting it for the first time
-  const isStatusPaid = useMemo(() => {
-    const statusLower = currentStatus.toLowerCase().trim();
+  // Check if status should be locked based on API response
+  const isLocked = useMemo(() => {
+    const status = application.status || currentStatus;
+    const normalizedStatus = status.toLowerCase().trim();
     
-    // Only lock when backend status indicates it's already paid with pending approval
-    // Check for various formats: "Paid(pending approval)", "paid pending approval", etc.
-    // EXCLUDE "Partially Paid" - it should never lock
-    if (statusLower.includes('partially paid')) {
-      return false;
-    }
+    // Check if status is numeric "6" (which represents "Paid (Pending Approval)")
+    const isNumericStatus6 = status === '6' || currentStatus === '6';
     
-    // Check if it's "Paid" with pending approval
-    // Must include both "paid" AND "pending" to indicate it's "Paid(pending approval)"
-    const isAlreadyPaid = (statusLower.includes('paid') && statusLower.includes('pending'));
+    // Lock if status is "Paid", "paid rejected", "paid pending approval", or numeric "6"
+    const shouldLock = normalizedStatus === 'paid' || 
+                       normalizedStatus === 'paid rejected' ||
+                       normalizedStatus === 'paid pending approval' ||
+                       normalizedStatus.includes('paid rejected') ||
+                       normalizedStatus.includes('paid pending approval') ||
+                       normalizedStatus.includes('paid(pending approval)') ||
+                       (normalizedStatus.includes('paid') && !normalizedStatus.includes('partially')) ||
+                       isNumericStatus6;
     
-    if (isAlreadyPaid) {
-      console.log('🔒 StatusTab: Locking fields - Already Paid(pending approval)', {
-        currentStatus,
-        statusLower
-      });
-    }
+    console.log('🔒 Status lock check:', { status, normalizedStatus, currentStatus, isNumericStatus6, shouldLock });
     
-    return isAlreadyPaid;
-  }, [currentStatus]);
+    return shouldLock;
+  }, [application.status, currentStatus]);
 
   // Set form data based on current status when status changes
   useEffect(() => {
@@ -658,9 +655,9 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       return;
     }
 
-    // Prevent submission if status is "Paid" and user is trying to change any fields
-    if (isStatusPaid && (formData.repaymentStatus || formData.ptpDate || formData.amountCollected !== '' || formData.paymentMode)) {
-      toast.error('Cannot change any fields when current status is "Paid". All fields are locked for paid applications.');
+    // Prevent submission if status is locked
+    if (isLocked) {
+      toast.error('Cannot change fields when status is "Paid". All fields are locked.');
       return;
     }
 
@@ -717,17 +714,26 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       // Update local state - backend should return the updated status
       // currentStatus will be updated automatically via the useEffect that watches application.status
       if (formData.repaymentStatus) {
-        // Get the status label from the options in this file (e.g., "Paid" for "6")
-        const statusOption = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === formData.repaymentStatus);
-        const statusLabel = statusOption?.label || formData.repaymentStatus;
+        // Use the actual backend response status if available, otherwise fallback to form data
+        const backendStatus = result?.new_status?.repayment_status || formData.repaymentStatus;
         
-        // Don't manually set currentStatus - let it update from the backend response
-        // The backend will return "Paid(pending approval)" which will trigger the lock via useEffect
-        onStatusChange(formData.repaymentStatus);
+        // Get the status label from the options in this file (e.g., "Paid (Pending Approval)" for "6")
+        const statusOption = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === backendStatus);
+        const statusLabel = statusOption?.label || backendStatus;
         
-        // Notify realtime updates - use the actual backend response status
-        // Result should contain the updated status from backend
-        const backendStatus = result?.new_status?.repayment_status || statusLabel;
+        // Update currentStatus immediately for real-time locking
+        // This will lock the fields immediately after submission without waiting for useEffect
+        setCurrentStatus(backendStatus);
+        
+        // Also update application.status to ensure the lock persists
+        // This is needed because isLocked checks both application.status and currentStatus
+        (application as any).status = backendStatus;
+        
+        // Pass the backend status (which will be "6" for "Paid" submission) to onStatusChange
+        // The parent component will use this to update the application status in the table
+        onStatusChange(backendStatus);
+        
+        // Notify realtime updates - use the backend response status which will be "6" for "Paid"
         notifyStatusUpdate(application.applicant_id, backendStatus);
       }
       if (formData.ptpDate) {
@@ -770,7 +776,9 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       
       if (formData.repaymentStatus && formData.repaymentStatus !== currentStatus) {
         const oldLabel = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === currentStatus)?.label || currentStatus;
-        const newLabel = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === formData.repaymentStatus)?.label || formData.repaymentStatus;
+        // Use the actual backend response status if available, otherwise map the dropdown value
+        const backendStatus = result?.new_status?.repayment_status || formData.repaymentStatus;
+        const newLabel = REPAYMENT_STATUS_OPTIONS.find(opt => opt.value === backendStatus)?.label || backendStatus;
         
         await addAuditLog(
           application.applicant_id,
@@ -892,7 +900,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           <CardTitle className="text-sm">Status Management</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          {isStatusPaid && (
+          {isLocked && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-center gap-2 text-amber-800">
                 <AlertCircle className="h-4 w-4" />
@@ -913,7 +921,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 key={`repayment-${formData.repaymentStatus}`} // Force re-render when value changes
                 value={formData.repaymentStatus || ''} // Ensure value is never undefined
                 onValueChange={(value) => handleFormFieldChange('repaymentStatus', value)}
-                disabled={isStatusPaid}
+                disabled={isLocked}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder={
@@ -935,11 +943,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   ))}
                 </SelectContent>
               </Select>
-              {isStatusPaid && (
-                <div className="text-xs text-amber-600 mt-1">
-                  Repayment status cannot be changed when current status is "Paid"
-                </div>
-              )}
             </div>
             
             {/* PTP DATE INPUT */}
@@ -954,26 +957,21 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   onChange={(e) => handleFormFieldChange('ptpDate', e.target.value)}
                   className="flex-1"
                   placeholder={application.ptp_date ? "Select PTP date" : "No PTP date set - select a date"}
-                  disabled={isStatusPaid}
+                  disabled={isLocked}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => handleFormFieldChange('ptpDate', 'clear')}
-                  disabled={isStatusPaid}
                   className="px-3"
+                  disabled={isLocked}
                 >
                   Clear
                 </Button>
               </div>
-              {!application.ptp_date && !isStatusPaid && (
+              {!application.ptp_date && (
                 <div className="text-xs text-gray-500">No PTP date set - enter a date above or click Clear</div>
-              )}
-              {isStatusPaid && (
-                <div className="text-xs text-amber-600 mt-1">
-                  PTP date cannot be changed when current status is "Paid"
-                </div>
               )}
             </div>
 
@@ -989,7 +987,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
                   placeholder="Enter amount"
                   className="mt-1"
-                  disabled={isStatusPaid}
+                  disabled={isLocked}
                 />
                 {/* Show total amount in smaller text below the input */}
                 {application.amount_collected && application.amount_collected > 0 && (
@@ -1027,18 +1025,9 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   }
                   
                   // Default placeholder text when no amount entered
-                  if (!application.amount_collected && !isStatusPaid && (!formData.amountCollected || formData.amountCollected === '')) {
+                  if (!application.amount_collected && (!formData.amountCollected || formData.amountCollected === '')) {
                     return (
                       <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
-                    );
-                  }
-                  
-                  // Locked status message
-                  if (isStatusPaid) {
-                    return (
-                      <div className="text-xs text-amber-600 mt-1">
-                        Amount collected cannot be changed when current status is "Paid"
-                      </div>
                     );
                   }
                   
@@ -1053,7 +1042,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   key={`payment-mode-${formData.paymentMode}`} // Force re-render when value changes
                   value={formData.paymentMode || ''} // Ensure value is never undefined
                   onValueChange={(value) => handleFormFieldChange('paymentMode', value)}
-                  disabled={isStatusPaid}
+                  disabled={isLocked}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select mode" />
@@ -1069,11 +1058,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                     ))}
                   </SelectContent>
                 </Select>
-                {isStatusPaid && (
-                  <div className="text-xs text-amber-600 mt-1">
-                    Payment mode cannot be changed when current status is "Paid"
-                  </div>
-                )}
               </div>
             </div>
 
@@ -1081,7 +1065,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
             <div className="pt-4">
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || isStatusPaid}
+                disabled={isSubmitting || isLocked}
                 className="w-full"
                 size="lg"
               >
@@ -1089,11 +1073,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Updating Status...
-                  </>
-                ) : isStatusPaid ? (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    No Changes Allowed
                   </>
                 ) : (
                   <>
