@@ -21,7 +21,6 @@ import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { getStatusLabel } from '@/utils/statusMapping';
 import RecentActivityCard from "./RecentActivityCard";
 import { useLoanRecentActivity } from '@/hooks/useRecentActivity';
-import { PAYMENT_MODE_OPTIONS } from '@/constants/options';
 
 interface StatusTabProps {
   application: Application;
@@ -583,14 +582,9 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       },
       ptpDate: formData.ptpDate,
       amountCollected: formData.amountCollected,
-      paymentMode: {
-        value: formData.paymentMode,
-        type: typeof formData.paymentMode,
-        label: PAYMENT_MODE_OPTIONS.find(opt => opt.value === formData.paymentMode)?.label || 'Not found'
-      },
       currentStatus: currentStatus
     });
-  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, formData.paymentMode, currentStatus]);
+  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, currentStatus]);
 
   // Debug form data on every render
   useEffect(() => {
@@ -627,32 +621,24 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     const hasFormData = formData.repaymentStatus || 
                        (formData.ptpDate && formData.ptpDate !== '' && formData.ptpDate !== 'clear') || 
                        formData.ptpDate === 'clear' ||
-                       (formData.amountCollected !== undefined && formData.amountCollected !== '' && formData.amountCollected !== '0') ||
-                       formData.paymentMode;
+                       (formData.amountCollected !== undefined && formData.amountCollected !== '' && formData.amountCollected !== '0');
 
     if (!hasFormData) {
       toast.error('Please fill in at least one field before submitting.');
       return;
     }
 
-    // Validate: If amount collected is entered, payment mode must be selected
+    // Validate amount is a valid number
     const hasAmountCollected = formData.amountCollected !== undefined && 
                                 formData.amountCollected !== '' && 
                                 formData.amountCollected !== '0';
-    const hasPaymentMode = formData.paymentMode && formData.paymentMode !== '';
     
-    // Validate amount is a valid number
     if (hasAmountCollected) {
       const amountValue = parseFloat(formData.amountCollected);
       if (isNaN(amountValue) || !isFinite(amountValue) || amountValue <= 0) {
         toast.error('Please enter a valid amount greater than 0.');
         return;
       }
-    }
-    
-    if (hasAmountCollected && !hasPaymentMode) {
-      toast.error('Please select a Payment Mode when entering an Amount Collected value.');
-      return;
     }
 
     // Prevent submission if status is locked
@@ -689,7 +675,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         repayment_status: formData.repaymentStatus ? parseInt(formData.repaymentStatus, 10) : undefined,
         ptp_date: formData.ptpDate === 'clear' ? 'clear' : (formData.ptpDate || undefined),
         amount_collected: newAmountCollected,
-        payment_mode_id: formData.paymentMode ? parseInt(formData.paymentMode, 10) : undefined,
         contact_calling_status: 0, // Default value as per API schema
         contact_type: 1 // Default value as per API schema
       };
@@ -763,8 +748,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         // Clear the formData fields as well to reset the inputs
         setFormData(prev => ({
           ...prev,
-          amountCollected: '',
-          paymentMode: '' // Also clear payment mode since it's linked to amount
+          amountCollected: ''
         }));
         
         // Notify realtime updates with the new total
@@ -809,17 +793,6 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           'Amount Collected',
           `₹${previousTotal.toLocaleString('en-IN')} (Added: ₹${newAmountAdded.toLocaleString('en-IN')})`,
           `₹${newTotal.toLocaleString('en-IN')}`,
-          '' // Empty string since month is now linked via repayment_id
-        );
-      }
-      
-      if (formData.paymentMode) {
-        const paymentModeLabel = PAYMENT_MODE_OPTIONS.find(opt => opt.value === formData.paymentMode)?.label || formData.paymentMode;
-        await addAuditLog(
-          application.applicant_id,
-          'Payment Mode',
-          'Not Set',
-          paymentModeLabel,
           '' // Empty string since month is now linked via repayment_id
         );
       }
@@ -975,90 +948,62 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
               )}
             </div>
 
-            {/* AMOUNT COLLECTED AND PAYMENT MODE INPUTS */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Amount Collected */}
-              <div>
-                <Label htmlFor="amount-collected">Amount Collected</Label>
-                <Input
-                  id="amount-collected"
-                  type="text"
-                  value={formData.amountCollected || ''} // Ensure value is never undefined
-                  onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
-                  placeholder="Enter amount"
-                  className="mt-1"
-                  disabled={isLocked}
-                />
-                {/* Show total amount in smaller text below the input */}
-                {application.amount_collected && application.amount_collected > 0 && (
-                  <div className="text-sm text-gray-600 mt-1">
-                    EMI Paid so far: ₹{application.amount_collected.toLocaleString('en-IN')}
-                  </div>
-                )}
-                {(() => {
-                  // Calculate new total if user has entered an amount
-                  const existingAmount = application.amount_collected || 0;
-                  const newAmount = formData.amountCollected ? parseFloat(formData.amountCollected) : 0;
-                  const newTotal = existingAmount + newAmount;
-                  
-                  // Check if the entered value is valid
-                  const isValidAmount = !isNaN(newAmount) && isFinite(newAmount) && newAmount > 0;
-                  
-                  // Show the calculation only when user has entered a valid value
-                  if (formData.amountCollected && formData.amountCollected !== '' && formData.amountCollected !== '0' && isValidAmount) {
-                    return (
-                      <>
-                        <div className="text-sm text-blue-600 mt-1 font-medium">
-                          EMI paid after this payment: ₹{newTotal.toLocaleString('en-IN')}
-                        </div>
-                      </>
-                    );
-                  }
-                  
-                  // Show error for invalid amount
-                  if (formData.amountCollected && formData.amountCollected !== '' && !isValidAmount) {
-                    return (
-                      <div className="text-xs text-red-600 mt-1">
-                        Please enter a valid amount
+            {/* AMOUNT COLLECTED */}
+            <div>
+              <Label htmlFor="amount-collected">Amount Collected</Label>
+              <Input
+                id="amount-collected"
+                type="text"
+                value={formData.amountCollected || ''} // Ensure value is never undefined
+                onChange={(e) => handleFormFieldChange('amountCollected', e.target.value)}
+                placeholder="Enter amount"
+                className="mt-1"
+                disabled={isLocked}
+              />
+              {/* Show total amount in smaller text below the input */}
+              {application.amount_collected && application.amount_collected > 0 && (
+                <div className="text-sm text-gray-600 mt-1">
+                  EMI Paid so far: ₹{application.amount_collected.toLocaleString('en-IN')}
+                </div>
+              )}
+              {(() => {
+                // Calculate new total if user has entered an amount
+                const existingAmount = application.amount_collected || 0;
+                const newAmount = formData.amountCollected ? parseFloat(formData.amountCollected) : 0;
+                const newTotal = existingAmount + newAmount;
+                
+                // Check if the entered value is valid
+                const isValidAmount = !isNaN(newAmount) && isFinite(newAmount) && newAmount > 0;
+                
+                // Show the calculation only when user has entered a valid value
+                if (formData.amountCollected && formData.amountCollected !== '' && formData.amountCollected !== '0' && isValidAmount) {
+                  return (
+                    <>
+                      <div className="text-sm text-blue-600 mt-1 font-medium">
+                        EMI paid after this payment: ₹{newTotal.toLocaleString('en-IN')}
                       </div>
-                    );
-                  }
-                  
-                  // Default placeholder text when no amount entered
-                  if (!application.amount_collected && (!formData.amountCollected || formData.amountCollected === '')) {
-                    return (
-                      <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
-                    );
-                  }
-                  
-                  return null;
-                })()}
-              </div>
-
-              {/* Payment Mode */}
-              <div>
-                <Label htmlFor="payment-mode">Payment Mode</Label>
-                <Select 
-                  key={`payment-mode-${formData.paymentMode}`} // Force re-render when value changes
-                  value={formData.paymentMode || ''} // Ensure value is never undefined
-                  onValueChange={(value) => handleFormFieldChange('paymentMode', value)}
-                  disabled={isLocked}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_MODE_OPTIONS.map((option) => (
-                      <SelectItem 
-                        key={option.value} 
-                        value={option.value}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    </>
+                  );
+                }
+                
+                // Show error for invalid amount
+                if (formData.amountCollected && formData.amountCollected !== '' && !isValidAmount) {
+                  return (
+                    <div className="text-xs text-red-600 mt-1">
+                      Please enter a valid amount
+                    </div>
+                  );
+                }
+                
+                // Default placeholder text when no amount entered
+                if (!application.amount_collected && (!formData.amountCollected || formData.amountCollected === '')) {
+                  return (
+                    <div className="text-xs text-gray-500">No amount collected - enter amount above</div>
+                  );
+                }
+                
+                return null;
+              })()}
             </div>
 
             {/* Submit Button */}
