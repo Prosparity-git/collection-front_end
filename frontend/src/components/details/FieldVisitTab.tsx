@@ -26,8 +26,8 @@ interface LocationData {
 
 // Hardcoded visit types based on the data structure
 const VISIT_TYPES = [
-  { id: 1, type_name: "Customer Visit", description: "Visit to customer location" },
-  { id: 2, type_name: "Follow-up Visit", description: "Follow-up visit for payment collection" }
+  { id: 1, type_name: "Customer Visit - House", description: "Visit to customer location" },
+  { id: 2, type_name: "Customer Visit - Outside Location", description: "Follow-up visit for payment collection" }
 ];
 
 // Utility function to round coordinates to meet backend validation requirements
@@ -398,12 +398,12 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                 <div key={visit.id} className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="space-y-3">
                     {/* Visit Info */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">
                           #{visit.id}
                         </Badge>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs w-fit">
                           {getVisitTypeName(visit.visit_type_id)}
                         </Badge>
                       </div>
