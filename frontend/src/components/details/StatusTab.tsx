@@ -120,6 +120,12 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     return shouldLock;
   }, [application.status, currentStatus]);
 
+  // Disable transitions to "Overdue" when status is Partially Paid
+  const isPartiallyPaid = useMemo(() => {
+    const status = (currentStatus || '').toString().toLowerCase().trim();
+    return status === '2' || status.includes('partially');
+  }, [currentStatus]);
+
   // Set form data based on current status when status changes
   useEffect(() => {
     console.log('🔄 StatusTab: Setting form data based on current status:', currentStatus);
@@ -734,11 +740,11 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           notifyPtpDateUpdate(application.applicant_id, formData.ptpDate);
         }
       }
-      if (formData.amountCollected !== undefined) {
+      if (hasAmountCollected) {
         // Backend returns the updated total amount after adding the new amount
         // Use the backend response if available, otherwise calculate locally for display
         const newAmount = parseFloat(formData.amountCollected);
-        const existingAmount = application.amount_collected || 0;
+        const existingAmount = Number(application.amount_collected) || 0;
         const totalAmount = existingAmount + newAmount;
         
         // Clear the form fields so user can enter a new amount next time
@@ -909,7 +915,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                     <SelectItem 
                       key={option.value} 
                       value={option.value}
-                      disabled={option.disabled}
+                      disabled={option.disabled || (isPartiallyPaid && option.value === '4')}
                     >
                       {option.label}
                     </SelectItem>
