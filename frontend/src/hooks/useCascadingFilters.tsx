@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { client } from '@/integrations/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { FilterState } from '@/types/filters';
@@ -30,6 +30,8 @@ export const useCascadingFilters = () => {
     branch: [],
     teamLead: [],
     rm: [],
+    sourceTeamLead: [],
+    sourceRm: [],
     dealer: [],
     lender: [],
     status: [],
@@ -37,7 +39,8 @@ export const useCascadingFilters = () => {
     repayment: [],
     lastMonthBounce: [],
     ptpDate: [],
-    vehicleStatus: []
+    vehicleStatus: [],
+    dpdBucket: []
   });
 
   const [availableOptions, setAvailableOptions] = useState<CascadingFilterOptions>({
@@ -58,6 +61,22 @@ export const useCascadingFilters = () => {
   const [defaultEmiMonth, setDefaultEmiMonth] = useState<string | null>(null);
   const [emiMonthOptions, setEmiMonthOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Track last changed key to apply dependency rules on applied filters
+  const lastChangedKeyRef = useRef<string | null>(null);
+
+  // Name -> ID maps for applied filters (seeded from cascading endpoint)
+  const [nameToId, setNameToId] = useState<Record<string, Record<string, number>>>(
+    {
+      branches: {},
+      team_leads: {},
+      rms: {},
+      source_team_leads: {},
+      source_rms: {},
+      dealers: {},
+      lenders: {}
+    }
+  );
 
   // Fetch filter options from backend API
   const fetchFilterOptions = useCallback(async () => {
@@ -107,14 +126,12 @@ export const useCascadingFilters = () => {
       // PRIMARY: Get demand dates from collection table first
       const { data: colDates } = await client
         .from('collection')
-        .select('demand_date')
-        .not('demand_date', 'is', null);
+        .select('demand_date');
 
       // SECONDARY: Get demand dates from applications table
       const { data: appDates } = await client
         .from('applications')
-        .select('demand_date')
-        .not('demand_date', 'is', null);
+        .select('demand_date');
 
       console.log('Raw collection dates:', colDates?.slice(0, 10));
       console.log('Raw app dates:', appDates?.slice(0, 10));
@@ -160,6 +177,7 @@ export const useCascadingFilters = () => {
   // Handle filter changes
   const handleFilterChange = useCallback((key: string, values: string[]) => {
     console.log('Filter change:', key, values);
+    lastChangedKeyRef.current = key;
     setFilters(prev => ({
       ...prev,
       [key]: values
@@ -175,6 +193,8 @@ export const useCascadingFilters = () => {
       branch: [],
       teamLead: [],
       rm: [],
+      sourceTeamLead: [],
+      sourceRm: [],
       dealer: [],
       lender: [],
       status: [],
@@ -182,7 +202,8 @@ export const useCascadingFilters = () => {
       repayment: [],
       lastMonthBounce: [],
       ptpDate: [],
-      vehicleStatus: []
+      vehicleStatus: [],
+      dpdBucket: []
     });
   }, []);
 
@@ -192,6 +213,8 @@ export const useCascadingFilters = () => {
       branch: [],
       teamLead: [],
       rm: [],
+      sourceTeamLead: [],
+      sourceRm: [],
       dealer: [],
       lender: [],
       status: [],
@@ -199,7 +222,8 @@ export const useCascadingFilters = () => {
       repayment: [],
       lastMonthBounce: [],
       ptpDate: [],
-      vehicleStatus: []
+      vehicleStatus: [],
+      dpdBucket: []
     });
   }, []);
 
@@ -216,6 +240,119 @@ export const useCascadingFilters = () => {
       fetchFilterOptions();
     }
   }, [user, selectedEmiMonth, filters, fetchFilterOptions]);
+
+  // Seed name->id maps from cascading endpoint on mount
+  useEffect(() => {
+    const seed = async () => {
+      try {
+        const res = await FiltersService.getCascadingOptions({});
+        const toMap = (arr: { id: number; name: string }[]) => Object.fromEntries(arr.map(i => [i.name, i.id])) as Record<string, number>;
+        setNameToId({
+          branches: toMap(res.branches || []),
+          team_leads: toMap(res.team_leads || []),
+          rms: toMap(res.rms || []),
+          source_team_leads: toMap(res.source_team_leads || []),
+          source_rms: toMap(res.source_rms || []),
+          dealers: toMap(res.dealers || []),
+          lenders: toMap(res.lenders || []),
+        });
+        // Also ensure initial options include dealers/lenders if present
+        setAvailableOptions(prev => ({
+          ...prev,
+          branches: res.branches?.map(i => i.name) || prev.branches,
+          team_leads: res.team_leads?.map(i => i.name) || (prev as any).team_leads,
+          rms: res.rms?.map(i => i.name) || prev.rms,
+          source_team_leads: res.source_team_leads?.map(i => i.name) || (prev as any).source_team_leads,
+          source_rms: res.source_rms?.map(i => i.name) || (prev as any).source_rms,
+          dealers: res.dealers?.map(i => i.name) || prev.dealers,
+          lenders: res.lenders?.map(i => i.name) || prev.lenders,
+        } as any));
+      } catch {}
+    };
+    seed();
+  }, []);
+
+  // Applied cascading: call backend with all selected ids, 250ms debounce
+  useEffect(() => {
+    if (!user) return;
+
+    const toId = (map: Record<string, number>, names: string[] | undefined) => {
+      if (!names || names.length === 0) return undefined;
+      return map[names[0]]; // use first selection for cascading context
+    };
+
+    const timer = setTimeout(async () => {
+      try {
+        const params = {
+          branch_id: toId(nameToId.branches, filters.branch),
+          tl_id: toId(nameToId.team_leads, filters.teamLead),
+          rm_id: toId(nameToId.rms, filters.rm),
+          source_tl_id: toId(nameToId.source_team_leads, filters.sourceTeamLead),
+          source_rm_id: toId(nameToId.source_rms, filters.sourceRm),
+          dealer_id: toId(nameToId.dealers, filters.dealer),
+          lender_id: toId(nameToId.lenders, filters.lender)
+        };
+
+        const res = await FiltersService.getCascadingOptions(params);
+
+        // Update name->id maps with latest options
+        const mergeMap = (prev: Record<string, number>, arr: { id: number; name: string }[]) => ({
+          ...prev,
+          ...Object.fromEntries((arr || []).map(i => [i.name, i.id]))
+        });
+        setNameToId(prev => ({
+          branches: mergeMap(prev.branches, res.branches || []),
+          team_leads: mergeMap(prev.team_leads, res.team_leads || []),
+          rms: mergeMap(prev.rms, res.rms || []),
+          source_team_leads: mergeMap(prev.source_team_leads, res.source_team_leads || []),
+          source_rms: mergeMap(prev.source_rms, res.source_rms || []),
+          dealers: mergeMap(prev.dealers, res.dealers || []),
+          lenders: mergeMap(prev.lenders, res.lenders || []),
+        }));
+
+        // Determine impacted lists and update availableOptions accordingly
+        const lastKey = lastChangedKeyRef.current;
+        const impacted = (() => {
+          switch (lastKey) {
+            case 'branch':
+              return ['team_leads', 'rms', 'source_team_leads', 'source_rms', 'dealers', 'lenders'];
+            case 'teamLead':
+              return ['rms', 'source_team_leads', 'source_rms', 'dealers', 'lenders'];
+            case 'rm':
+              return ['team_leads', 'source_team_leads', 'source_rms', 'dealers', 'lenders'];
+            case 'sourceTeamLead':
+              return ['source_rms', 'team_leads', 'rms', 'dealers', 'lenders'];
+            case 'sourceRm':
+              return ['source_team_leads', 'team_leads', 'rms', 'dealers', 'lenders'];
+            case 'dealer':
+              return ['branches', 'team_leads', 'rms', 'source_team_leads', 'source_rms', 'lenders'];
+            case 'lender':
+              return ['branches', 'team_leads', 'rms', 'source_team_leads', 'source_rms', 'dealers'];
+            default:
+              return [] as string[];
+          }
+        })();
+
+        setAvailableOptions(prev => {
+          const names = (arr?: { id: number; name: string }[]) => (arr || []).map(i => i.name);
+          const next: any = { ...prev };
+          if (impacted.includes('branches')) next.branches = names(res.branches);
+          if (impacted.includes('team_leads')) next.team_leads = names(res.team_leads);
+          if (impacted.includes('rms')) next.rms = names(res.rms);
+          if (impacted.includes('source_team_leads')) next.source_team_leads = names(res.source_team_leads);
+          if (impacted.includes('source_rms')) next.source_rms = names(res.source_rms);
+          if (impacted.includes('dealers')) next.dealers = names(res.dealers);
+          if (impacted.includes('lenders')) next.lenders = names(res.lenders);
+          return next;
+        });
+      } catch (e) {
+        // ignore cascading errors to avoid breaking applied filters UX
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+    // Include dealer/lender in deps to trigger cascading
+  }, [user, filters.branch, filters.teamLead, filters.rm, (filters as any).sourceTeamLead, (filters as any).sourceRm, filters.dealer, filters.lender, nameToId]);
 
   return {
     filters,

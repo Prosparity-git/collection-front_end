@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import FilterHeader from "@/components/filters/FilterHeader";
 import FilterContent from "@/components/filters/FilterContent";
 import { calculateActiveFilterCount } from "@/utils/filterUtils";
+import { FiltersService } from "@/integrations/api/services";
 
 interface FilterBarProps {
   filters: any;
@@ -26,6 +27,23 @@ const FilterBar = ({
   // Temporary filters - what user is currently selecting
   const [tempFilters, setTempFilters] = useState(filters);
 
+  // Track last changed key to apply dependency rules
+  const lastChangedKeyRef = useRef<string | null>(null);
+
+  // Name -> ID maps for cascading API
+  const [idMaps, setIdMaps] = useState<Record<string, Record<string, number>>>({
+    branches: {},
+    team_leads: {},
+    rms: {},
+    source_team_leads: {},
+    source_rms: {},
+    dealers: {},
+    lenders: {}
+  });
+
+  // Overrides for live preview while panel is open
+  const [cascadeOverrides, setCascadeOverrides] = useState<Partial<Record<string, string[]>>>({});
+
   // Update temp filters when applied filters change
   useEffect(() => {
     setTempFilters(filters);
@@ -36,6 +54,7 @@ const FilterBar = ({
 
   // Handle temporary filter changes (doesn't trigger API calls)
   const handleTempFilterChange = (key: string, values: string[]) => {
+    lastChangedKeyRef.current = key;
     setTempFilters(prev => ({
       ...prev,
       [key]: values
@@ -83,6 +102,114 @@ const FilterBar = ({
     lastMonthBounce: availableOptions?.lastMonthBounce?.length || 0
   });
 
+  // Build selected IDs from names using idMaps
+  const buildSelectedIds = () => {
+    const pickFirstId = (map: Record<string, number>, names: string[] | undefined) => {
+      if (!names || names.length === 0) return undefined;
+      const first = names[0];
+      return map[first];
+    };
+
+    return {
+      branch_id: pickFirstId(idMaps.branches, tempFilters.branch),
+      tl_id: pickFirstId(idMaps.team_leads, tempFilters.teamLead),
+      rm_id: pickFirstId(idMaps.rms, tempFilters.rm),
+      source_tl_id: pickFirstId(idMaps.source_team_leads, tempFilters.sourceTeamLead),
+      source_rm_id: pickFirstId(idMaps.source_rms, tempFilters.sourceRm),
+      dealer_id: pickFirstId(idMaps.dealers, tempFilters.dealer),
+      lender_id: pickFirstId(idMaps.lenders, tempFilters.lender)
+    };
+  };
+
+  // Helper to merge id maps from API response
+  const mergeIdMaps = (items: { id: number; name: string }[]) =>
+    Object.fromEntries(items.map(i => [i.name, i.id])) as Record<string, number>;
+
+  // Determine which lists are impacted by the last changed key
+  const impactedListsForKey = (key: string | null): string[] => {
+    switch (key) {
+      case 'branch':
+        return ['team_leads', 'rms', 'source_team_leads', 'source_rms', 'dealers', 'lenders'];
+      case 'teamLead':
+        return ['rms', 'source_team_leads', 'source_rms', 'dealers', 'lenders'];
+      case 'rm':
+        return ['team_leads', 'source_team_leads', 'source_rms', 'dealers', 'lenders'];
+      case 'sourceTeamLead':
+        return ['source_rms', 'team_leads', 'rms', 'dealers', 'lenders'];
+      case 'sourceRm':
+        return ['source_team_leads', 'team_leads', 'rms', 'dealers', 'lenders'];
+      case 'dealer':
+        return ['branches', 'team_leads', 'rms', 'source_team_leads', 'source_rms', 'lenders'];
+      case 'lender':
+        return ['branches', 'team_leads', 'rms', 'source_team_leads', 'source_rms', 'dealers'];
+      default:
+        return [];
+    }
+  };
+
+  // Debounced live cascading while panel is open
+  useEffect(() => {
+    if (!isOpen) {
+      setCascadeOverrides({});
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        const params = buildSelectedIds();
+        const res = await FiltersService.getCascadingOptions(params);
+
+        // Update id maps by merging
+        setIdMaps(prev => ({
+          branches: { ...prev.branches, ...mergeIdMaps(res.branches || []) },
+          team_leads: { ...prev.team_leads, ...mergeIdMaps(res.team_leads || []) },
+          rms: { ...prev.rms, ...mergeIdMaps(res.rms || []) },
+          source_team_leads: { ...prev.source_team_leads, ...mergeIdMaps(res.source_team_leads || []) },
+          source_rms: { ...prev.source_rms, ...mergeIdMaps(res.source_rms || []) },
+          dealers: { ...prev.dealers, ...mergeIdMaps(res.dealers || []) },
+          lenders: { ...prev.lenders, ...mergeIdMaps(res.lenders || []) }
+        }));
+
+        // Compute overrides for impacted lists only
+        const lastKey = lastChangedKeyRef.current;
+        const impacted = impactedListsForKey(lastKey);
+        const toNames = (arr?: { id: number; name: string }[]) => (arr || []).map(i => i.name);
+        const overrides: Partial<Record<string, string[]>> = {};
+
+        if (impacted.includes('branches')) overrides.branches = toNames(res.branches);
+        if (impacted.includes('team_leads')) overrides.team_leads = toNames(res.team_leads);
+        if (impacted.includes('rms')) overrides.rms = toNames(res.rms);
+        if (impacted.includes('source_team_leads')) overrides.source_team_leads = toNames(res.source_team_leads);
+        if (impacted.includes('source_rms')) overrides.source_rms = toNames(res.source_rms);
+        if (impacted.includes('dealers')) overrides.dealers = toNames(res.dealers);
+        if (impacted.includes('lenders')) overrides.lenders = toNames(res.lenders);
+
+        setCascadeOverrides(overrides);
+      } catch (e) {
+        // Swallow errors in live preview to avoid UX disruption
+        setCascadeOverrides({});
+      }
+    }, 250);
+
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, tempFilters]);
+
+  // Merge base options with overrides for preview
+  const mergedAvailableOptions = useMemo(() => {
+    const mergeList = (base: string[] | undefined, over?: string[]) => (over && over.length ? over : base || []);
+    return {
+      ...availableOptions,
+      branches: mergeList(availableOptions?.branches, cascadeOverrides.branches),
+      team_leads: mergeList(availableOptions?.team_leads, cascadeOverrides.team_leads),
+      rms: mergeList(availableOptions?.rms, cascadeOverrides.rms),
+      source_team_leads: mergeList(availableOptions?.source_team_leads, cascadeOverrides.source_team_leads),
+      source_rms: mergeList(availableOptions?.source_rms, cascadeOverrides.source_rms),
+      dealers: mergeList(availableOptions?.dealers, cascadeOverrides.dealers),
+      lenders: mergeList(availableOptions?.lenders, cascadeOverrides.lenders)
+    };
+  }, [availableOptions, cascadeOverrides]);
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
       <FilterHeader
@@ -97,7 +224,7 @@ const FilterBar = ({
       <CollapsibleContent>
         <FilterContent
           filters={tempFilters}
-          availableOptions={availableOptions || {}}
+          availableOptions={mergedAvailableOptions || {}}
           onFilterChange={handleTempFilterChange}
           onClose={handleApplyFilters}
           onCancel={handleCancel}
