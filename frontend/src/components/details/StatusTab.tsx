@@ -20,6 +20,7 @@ import { StatusManagementService } from '@/integrations/api/services/statusManag
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { getStatusLabel } from '@/utils/statusMapping';
 import RecentActivityCard from "./RecentActivityCard";
+import OTPVerificationModal from '@/components/OTPVerificationModal';
 import { useLoanRecentActivity } from '@/hooks/useRecentActivity';
 
 interface StatusTabProps {
@@ -96,7 +97,14 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
   
+  // Get the actual status label for display
+  const statusLabel = useMemo(() => {
+    const status = application.status || currentStatus;
+    return getStatusLabel(status);
+  }, [application.status, currentStatus]);
+
   // Check if status should be locked based on API response
   const isLocked = useMemo(() => {
     const status = application.status || currentStatus;
@@ -605,8 +613,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     });
   }, [formData, user, selectedMonth, application?.applicant_id]);
 
-  // Handle form submission using the new StatusManagementService
-  const handleSubmit = async () => {
+  // Actual submit logic extracted for OTP gating
+  const performStatusUpdate = async () => {
     console.log('🔍 Submit validation check:', {
       user: !!user,
       selectedMonth,
@@ -839,6 +847,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     }
   };
 
+  // Gate submission for Paid (6) or Partially Paid (2) behind OTP
+  const handleSubmit = async () => {
+    const requiresOtp = formData.repaymentStatus === '2' || formData.repaymentStatus === '6';
+    if (requiresOtp) {
+      setShowOtpModal(true);
+      return;
+    }
+    await performStatusUpdate();
+  };
+
   // Optimized date formatting function
   const formatDateTime = useMemo(() => {
     return (dateStr: string) => {
@@ -886,7 +904,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 <span className="font-medium">Status Locked</span>
               </div>
               <p className="text-sm text-amber-700 mt-1">
-                This application has a "Paid" status. All fields are locked and cannot be modified.
+                This application has a "{statusLabel}" status. All fields are locked and cannot be modified.
               </p>
             </div>
           )}
@@ -1106,6 +1124,17 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           maxItems={50}
         />
       )}
+
+    <OTPVerificationModal
+      open={showOtpModal}
+      onClose={() => setShowOtpModal(false)}
+      onSuccess={async () => {
+        setShowOtpModal(false);
+        await performStatusUpdate();
+      }}
+      application={application}
+      amount={parseFloat(formData.amountCollected || '0') || 0}
+    />
     </div>
   );
 };

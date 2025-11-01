@@ -11,6 +11,7 @@ export * from './recentActivityService';
 export * from './statusManagementService';
 export * from './summaryService';
 export * from './userService';
+export * from './otpService';
 
 // Export the main API client
 export { client } from '../client';
