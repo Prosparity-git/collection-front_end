@@ -13,6 +13,7 @@ import ApplicationDetailsPanel from "@/components/ApplicationDetailsPanel";
 import { getApplicationDetails, getApplicationsFromBackend, getFilterOptions, getCollectionsSummary, mapApiResponseToApplication } from '@/integrations/api/client';
 import { getCurrentEmiMonth, generateMonthOptions } from '@/utils/formatters';
 import { useRealtimeApplicationUpdates } from '@/hooks/useRealtimeApplicationUpdates';
+import { useCascadingFilters } from '@/hooks/useCascadingFilters';
 
 const PAGE_SIZE = 20;
 

@@ -49,6 +49,29 @@ const FilterBar = ({
     setTempFilters(filters);
   }, [filters]);
 
+  // Seed idMaps on mount
+  useEffect(() => {
+    const seed = async () => {
+      try {
+        const res = await FiltersService.getCascadingOptions({});
+        const toMap = (arr: { id: number; name: string }[]) => 
+          Object.fromEntries(arr.map(i => [i.name, i.id])) as Record<string, number>;
+        setIdMaps({
+          branches: toMap(res.branches || []),
+          team_leads: toMap(res.team_leads || []),
+          rms: toMap(res.rms || []),
+          source_team_leads: toMap(res.source_team_leads || []),
+          source_rms: toMap(res.source_rms || []),
+          dealers: toMap(res.dealers || []),
+          lenders: toMap(res.lenders || []),
+        });
+      } catch (e) {
+        console.error('Failed to seed idMaps:', e);
+      }
+    };
+    seed();
+  }, []);
+
   // Calculate total active filters with proper typing (use applied filters for badge)
   const activeFilterCount = calculateActiveFilterCount(filters);
 
@@ -170,19 +193,21 @@ const FilterBar = ({
           lenders: { ...prev.lenders, ...mergeIdMaps(res.lenders || []) }
         }));
 
-        // Compute overrides for impacted lists only
+        // Compute overrides for ALL cascading fields to ensure consistency
+        // This ensures that when a filter is selected, all dependent filters show the correct filtered options
         const lastKey = lastChangedKeyRef.current;
         const impacted = impactedListsForKey(lastKey);
         const toNames = (arr?: { id: number; name: string }[]) => (arr || []).map(i => i.name);
         const overrides: Partial<Record<string, string[]>> = {};
 
-        if (impacted.includes('branches')) overrides.branches = toNames(res.branches);
-        if (impacted.includes('team_leads')) overrides.team_leads = toNames(res.team_leads);
-        if (impacted.includes('rms')) overrides.rms = toNames(res.rms);
-        if (impacted.includes('source_team_leads')) overrides.source_team_leads = toNames(res.source_team_leads);
-        if (impacted.includes('source_rms')) overrides.source_rms = toNames(res.source_rms);
-        if (impacted.includes('dealers')) overrides.dealers = toNames(res.dealers);
-        if (impacted.includes('lenders')) overrides.lenders = toNames(res.lenders);
+        // Always update ALL cascading fields when any filter changes
+        overrides.branches = toNames(res.branches);
+        overrides.team_leads = toNames(res.team_leads);
+        overrides.rms = toNames(res.rms);
+        overrides.source_team_leads = toNames(res.source_team_leads);
+        overrides.source_rms = toNames(res.source_rms);
+        overrides.dealers = toNames(res.dealers);
+        overrides.lenders = toNames(res.lenders);
 
         setCascadeOverrides(overrides);
       } catch (e) {
