@@ -23,6 +23,7 @@ const FilterBar = ({
   emiMonthOptions = []
 }: FilterBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeOpenKey, setActiveOpenKey] = useState<string | null>(null);
   
   // Temporary filters - what user is currently selecting
   const [tempFilters, setTempFilters] = useState(filters);
@@ -44,18 +45,21 @@ const FilterBar = ({
   // Overrides for live preview while panel is open
   const [cascadeOverrides, setCascadeOverrides] = useState<Partial<Record<string, string[]>>>({});
 
+  // Name normalization function to handle whitespace/case differences
+  const normalize = (s: string) => s?.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+
   // Update temp filters when applied filters change
   useEffect(() => {
     setTempFilters(filters);
   }, [filters]);
 
-  // Seed idMaps on mount
+  // Seed idMaps on mount with normalized names
   useEffect(() => {
     const seed = async () => {
       try {
         const res = await FiltersService.getCascadingOptions({});
         const toMap = (arr: { id: number; name: string }[]) => 
-          Object.fromEntries(arr.map(i => [i.name, i.id])) as Record<string, number>;
+          Object.fromEntries(arr.map(i => [normalize(i.name), i.id])) as Record<string, number>;
         setIdMaps({
           branches: toMap(res.branches || []),
           team_leads: toMap(res.team_leads || []),
@@ -74,6 +78,12 @@ const FilterBar = ({
 
   // Calculate total active filters with proper typing (use applied filters for badge)
   const activeFilterCount = calculateActiveFilterCount(filters);
+  
+  // Calculate total pending selections (temporary filters)
+  const pendingFilterCount = calculateActiveFilterCount(tempFilters);
+  
+  // Check if there are any filters (applied or pending)
+  const hasAnyFilters = activeFilterCount > 0 || pendingFilterCount > 0;
 
   // Handle temporary filter changes (doesn't trigger API calls)
   const handleTempFilterChange = (key: string, values: string[]) => {
@@ -98,17 +108,31 @@ const FilterBar = ({
     setIsOpen(false);
   };
 
-  // Clear all filters (both temp and applied)
+  // Clear all filters (both temp and applied) - works at all times, even with pending selections
   const clearAllFilters = () => {
+    // Create empty filters object for all filter keys
     const emptyFilters = Object.keys(filters).reduce((acc, key) => {
       acc[key] = [];
       return acc;
     }, {} as any);
     
+    // Clear temporary filters (pending selections)
     setTempFilters(emptyFilters);
+    
+    // Clear all applied filters immediately
     Object.keys(emptyFilters).forEach(key => {
       onFilterChange(key, []);
     });
+    
+    // Reset state
+    setActiveOpenKey(null);
+    setCascadeOverrides({});
+    lastChangedKeyRef.current = null;
+    
+    // Close panel if it's open
+    if (isOpen) {
+      setIsOpen(false);
+    }
   };
 
   // Reset temporary filters to match applied filters (cancel changes)
@@ -117,36 +141,32 @@ const FilterBar = ({
     setIsOpen(false);
   };
 
-  console.log('FilterBar render - available options:', {
-    statuses: availableOptions?.statuses?.length || 0,
-    ptpDateOptions: availableOptions?.ptpDateOptions?.length || 0,
-    branches: availableOptions?.branches?.length || 0,
-    repayments: availableOptions?.repayments?.length || 0,
-    lastMonthBounce: availableOptions?.lastMonthBounce?.length || 0
-  });
-
-  // Build selected IDs from names using idMaps
-  const buildSelectedIds = () => {
-    const pickFirstId = (map: Record<string, number>, names: string[] | undefined) => {
+  // Build selected IDs (comma-separated) from names using idMaps with normalization
+  const buildSelectedIds = (omitKey?: string | null) => {
+    const toIds = (map: Record<string, number>, names: string[] | undefined) => {
       if (!names || names.length === 0) return undefined;
-      const first = names[0];
-      return map[first];
+      const ids = names
+        .map(n => map[normalize(n)])
+        .filter((v): v is number => typeof v === 'number');
+      return ids.length ? ids.join(',') : undefined;
     };
 
+    const omitSet = new Set<string>([omitKey || '']);
+
     return {
-      branch_id: pickFirstId(idMaps.branches, tempFilters.branch),
-      tl_id: pickFirstId(idMaps.team_leads, tempFilters.teamLead),
-      rm_id: pickFirstId(idMaps.rms, tempFilters.rm),
-      source_tl_id: pickFirstId(idMaps.source_team_leads, tempFilters.sourceTeamLead),
-      source_rm_id: pickFirstId(idMaps.source_rms, tempFilters.sourceRm),
-      dealer_id: pickFirstId(idMaps.dealers, tempFilters.dealer),
-      lender_id: pickFirstId(idMaps.lenders, tempFilters.lender)
+      branch_id: omitSet.has('branch') ? undefined : toIds(idMaps.branches, tempFilters.branch),
+      tl_id: omitSet.has('teamLead') ? undefined : toIds(idMaps.team_leads, tempFilters.teamLead),
+      rm_id: omitSet.has('rm') ? undefined : toIds(idMaps.rms, tempFilters.rm),
+      source_tl_id: omitSet.has('sourceTeamLead') ? undefined : toIds(idMaps.source_team_leads, tempFilters.sourceTeamLead),
+      source_rm_id: omitSet.has('sourceRm') ? undefined : toIds(idMaps.source_rms, tempFilters.sourceRm),
+      dealer_id: omitSet.has('dealer') ? undefined : toIds(idMaps.dealers, tempFilters.dealer),
+      lender_id: omitSet.has('lender') ? undefined : toIds(idMaps.lenders, tempFilters.lender)
     };
   };
 
-  // Helper to merge id maps from API response
+  // Helper to merge id maps from API response with normalization
   const mergeIdMaps = (items: { id: number; name: string }[]) =>
-    Object.fromEntries(items.map(i => [i.name, i.id])) as Record<string, number>;
+    Object.fromEntries(items.map(i => [normalize(i.name), i.id])) as Record<string, number>;
 
   // Determine which lists are impacted by the last changed key
   const impactedListsForKey = (key: string | null): string[] => {
@@ -170,7 +190,7 @@ const FilterBar = ({
     }
   };
 
-  // Debounced live cascading while panel is open
+  // Debounced live cascading while panel is open (60ms debounce for faster response)
   useEffect(() => {
     if (!isOpen) {
       setCascadeOverrides({});
@@ -179,10 +199,11 @@ const FilterBar = ({
 
     const timeout = setTimeout(async () => {
       try {
-        const params = buildSelectedIds();
-        const res = await FiltersService.getCascadingOptions(params);
+        // When a dropdown opens, omit that key from the API call to get fresh options
+        const params = buildSelectedIds(activeOpenKey);
+        const res = await FiltersService.getCascadingOptions(params as any);
 
-        // Update id maps by merging
+        // Update id maps by merging with normalized names
         setIdMaps(prev => ({
           branches: { ...prev.branches, ...mergeIdMaps(res.branches || []) },
           team_leads: { ...prev.team_leads, ...mergeIdMaps(res.team_leads || []) },
@@ -194,7 +215,6 @@ const FilterBar = ({
         }));
 
         // Compute overrides for ALL cascading fields to ensure consistency
-        // This ensures that when a filter is selected, all dependent filters show the correct filtered options
         const lastKey = lastChangedKeyRef.current;
         const impacted = impactedListsForKey(lastKey);
         const toNames = (arr?: { id: number; name: string }[]) => (arr || []).map(i => i.name);
@@ -214,11 +234,11 @@ const FilterBar = ({
         // Swallow errors in live preview to avoid UX disruption
         setCascadeOverrides({});
       }
-    }, 250);
+    }, 30);
 
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, tempFilters]);
+  }, [isOpen, tempFilters, activeOpenKey]);
 
   // Merge base options with overrides for preview
   const mergedAvailableOptions = useMemo(() => {
@@ -244,6 +264,7 @@ const FilterBar = ({
         onEmiMonthChange={onEmiMonthChange}
         emiMonthOptions={emiMonthOptions}
         onClearAllFilters={clearAllFilters}
+        hasAnyFilters={hasAnyFilters}
       />
 
       <CollapsibleContent>
@@ -253,6 +274,7 @@ const FilterBar = ({
           onFilterChange={handleTempFilterChange}
           onClose={handleApplyFilters}
           onCancel={handleCancel}
+          onDropdownOpenChange={(key, open) => setActiveOpenKey(open ? key : null)}
         />
       </CollapsibleContent>
     </Collapsible>

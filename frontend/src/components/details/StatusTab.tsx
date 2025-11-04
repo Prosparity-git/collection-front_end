@@ -849,11 +849,51 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
 
   // Gate submission for Paid (6) or Partially Paid (2) behind OTP
   const handleSubmit = async () => {
-    const requiresOtp = formData.repaymentStatus === '2' || formData.repaymentStatus === '6';
+    // Get the target status (what user selected, or current if unchanged)
+    const targetStatus = formData.repaymentStatus || mapBackendStatusToDropdownValue(currentStatus);
+    
+    // Check if target status is '2' (Partially Paid) or '6' (Paid)
+    const isTargetStatus2Or6 = targetStatus === '2' || targetStatus === '6';
+    
+    // Check if user entered an amount > 0
+    let hasAmountEntered = formData.amountCollected !== undefined && 
+                            formData.amountCollected !== '' && 
+                            formData.amountCollected !== '0';
+    
+    let amountValue = 0;
+    if (hasAmountEntered) {
+      amountValue = parseFloat(formData.amountCollected);
+      if (isNaN(amountValue) || !isFinite(amountValue) || amountValue <= 0) {
+        hasAmountEntered = false;
+      }
+    }
+    
+    // OTP should only be triggered when:
+    // 1. User selects status "Partially Paid" (value '2') OR "Paid" (value '6')
+    // 2. AND user enters an amount > 0
+    // 3. If status is already Partially Paid and user only changes PTP date without entering amount, NO OTP
+    // 4. If user submits without changing status or entering amount, NO OTP
+    const requiresOtp = isTargetStatus2Or6 && hasAmountEntered;
+    
+    // If status is '6' (Paid), validate total amount >= EMI BEFORE opening OTP modal
+    if (targetStatus === '6' && hasAmountEntered) {
+      const existingAmount = Number(application.amount_collected) || 0;
+      const totalAmount = existingAmount + amountValue;
+      const emiAmount = application.emi_amount || 0;
+      
+      if (totalAmount < emiAmount) {
+        toast.error(`Amount collected must be >= EMI (₹${emiAmount.toLocaleString('en-IN')}) for Paid`);
+        return;
+      }
+    }
+    
+    // If OTP is required, show modal; otherwise proceed with submission
     if (requiresOtp) {
       setShowOtpModal(true);
       return;
     }
+    
+    // Allow submission without OTP if no status change or no amount entered
     await performStatusUpdate();
   };
 

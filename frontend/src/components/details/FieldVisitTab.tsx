@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Application } from "@/types/application";
 import { FieldVisitService, FieldVisitLocation, CreateFieldVisitRequest } from "@/integrations/api/services/fieldVisitService";
+import { DocumentService } from "@/integrations/api/services";
+import SelfieUploader from "./SelfieUploader";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -26,8 +28,8 @@ interface LocationData {
 
 // Hardcoded visit types based on the data structure
 const VISIT_TYPES = [
-  { id: 1, type_name: "Customer Visit - House", description: "Visit to customer location" },
-  { id: 2, type_name: "Customer Visit - Outside Location", description: "Follow-up visit for payment collection" }
+  { id: 1, type_name: "Customer Visit - House", description: "Visit to customer's house" },
+  { id: 2, type_name: "Customer Visit - Outside Location", description: "Visit at outside location" }
 ];
 
 // Utility function to round coordinates to meet backend validation requirements
@@ -48,6 +50,10 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [selectedVisitForMap, setSelectedVisitForMap] = useState<FieldVisitLocation | null>(null);
   const [showMapDialog, setShowMapDialog] = useState(false);
+  const [selfieUrlsByVisit, setSelfieUrlsByVisit] = useState<Record<number, string[]>>({});
+  const [autoStartCaptureVisitId, setAutoStartCaptureVisitId] = useState<number | null>(null);
+  const [allowCapture, setAllowCapture] = useState<boolean>(false);
+  const [selfieDocCategoryId, setSelfieDocCategoryId] = useState<number | null>(null);
 
   // Load field visits for this application
   const loadFieldVisits = useCallback(async () => {
@@ -80,6 +86,40 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
   useEffect(() => {
     loadFieldVisits();
   }, [loadFieldVisits]);
+
+  // Load all docs by loan and group by field_visit_location_id to show under each visit
+  useEffect(() => {
+    const run = async () => {
+      if (!applicationId) return;
+      try {
+        const docs = await DocumentService.listByLoan(applicationId);
+        const map: Record<number, string[]> = {};
+        for (const d of docs) {
+          const visitId = (d as any).field_visit_location_id as number | undefined;
+          if (!visitId) continue;
+          if (!map[visitId]) map[visitId] = [];
+          map[visitId].push(d.url);
+        }
+        setSelfieUrlsByVisit(map);
+      } catch (err) {
+        console.error('Failed to load documents by loan:', err);
+      }
+    };
+    void run();
+  }, [applicationId, fieldVisits.length]);
+
+  // TODO: Fetch selfieDocCategoryId from backend or constants
+  // For now, using a placeholder - you should replace this with actual fetching logic
+  useEffect(() => {
+    // Example: Fetch doc category ID for SELFIE
+    // This should be replaced with actual API call or constant
+    const fetchSelfieDocCategoryId = async () => {
+      // TODO: Replace with actual API call to get doc category ID for "SELFIE"
+      // For now, using placeholder value
+      setSelfieDocCategoryId(1); // Replace with actual ID
+    };
+    void fetchSelfieDocCategoryId();
+  }, []);
 
   // Get user's current location
   const getCurrentLocation = async () => {
@@ -157,8 +197,10 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
 
       const newVisit = await FieldVisitService.createFieldVisit(visitData);
       
-      // Add to local state
+      // Add to local state and auto-start camera for this visit
       setFieldVisits(prev => [newVisit, ...prev]);
+      setAutoStartCaptureVisitId(newVisit.id);
+      setAllowCapture(true); // show camera/uploader only right after a successful visit
       
       setAlert({ 
         type: 'success', 
@@ -375,6 +417,32 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                 )}
               </Button>
             )}
+
+            {/* Selfie Uploader shown ONLY immediately after a successful visit */}
+            {selfieDocCategoryId !== null && fieldVisits.length > 0 && allowCapture && (
+              <div className="space-y-3 pt-2">
+                <Label className="text-sm font-medium">Upload Selfie for Latest Visit</Label>
+                <SelfieUploader
+                  applicantId={application?.applicant_id || ''}
+                  loanApplicationId={applicationId!}
+                  fieldVisitLocationId={fieldVisits[0].id}
+                  selfieDocCategoryId={selfieDocCategoryId}
+                  repaymentId={paymentId}
+                  autoStart={autoStartCaptureVisitId === fieldVisits[0].id && autoStartCaptureVisitId !== null}
+                  visitTypeLabel={VISIT_TYPES.find(v => v.id === selectedVisitType)?.type_name}
+                  onUploaded={(url) => {
+                    setSelfieUrlsByVisit(prev => ({
+                      ...prev,
+                      [fieldVisits[0].id]: [url, ...(prev[fieldVisits[0].id] || [])]
+                    }));
+                    // Reset auto-start immediately after upload - prevents auto-start on refresh
+                    setAutoStartCaptureVisitId(null);
+                    setAllowCapture(false); // hide camera until the next visit is created
+                    toast.success('Selfie uploaded');
+                  }}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -444,6 +512,26 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                         <span className="text-xs">External</span>
                       </Button>
                     </div>
+
+                    {/* Selfies for this visit - clickable to open */}
+                    {selfieUrlsByVisit[visit.id] && selfieUrlsByVisit[visit.id].length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 pt-1">
+                        {selfieUrlsByVisit[visit.id].map((u, idx) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img 
+                            key={idx} 
+                            src={u} 
+                            alt={`selfie-${idx + 1}`} 
+                            className="w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" 
+                            onClick={() => window.open(u, '_blank')}
+                            onError={(e) => {
+                              console.error('Failed to load selfie image:', u);
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

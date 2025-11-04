@@ -12,6 +12,8 @@ interface CustomMultiSelectFilterProps {
   onSelectionChange: (selected: string[]) => void;
   placeholder?: string;
   formatDisplay?: (value: string) => string;
+  onOpenChange?: (open: boolean) => void;
+  deferChangeUntilClose?: boolean;
 }
 
 const CustomMultiSelectFilter = ({ 
@@ -20,25 +22,28 @@ const CustomMultiSelectFilter = ({
   selected = [], 
   onSelectionChange,
   placeholder = "Select options...",
-  formatDisplay
+  formatDisplay,
+  onOpenChange,
+  deferChangeUntilClose = false
 }: CustomMultiSelectFilterProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [localSelected, setLocalSelected] = useState<string[]>(selected || []);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Debug logging for options
+  // Sync localSelected from props when closed
   useEffect(() => {
-    console.log(`🔍 CustomMultiSelectFilter [${label}]: Received options:`, options);
-    console.log(`🔍 CustomMultiSelectFilter [${label}]: Options length:`, options?.length);
-    console.log(`🔍 CustomMultiSelectFilter [${label}]: Selected values:`, selected);
-  }, [options, selected, label]);
+    if (!open) {
+      setLocalSelected(selected);
+    }
+  }, [selected.join(','), open]);
 
   // Clean and filter options
   const safeOptions = options.filter(option => 
     option && typeof option === 'string' && option.trim().length > 0
   );
 
-  const safeSelected = selected.filter(item => 
+  const safeSelected = localSelected.filter(item => 
     item && typeof item === 'string' && item.trim().length > 0
   );
 
@@ -51,45 +56,42 @@ const CustomMultiSelectFilter = ({
   const toggleOption = (option: string) => {
     if (!option) return;
     
-    console.log('=== TOGGLE OPTION ===');
-    console.log('Option:', option);
-    console.log('Current selected:', safeSelected);
+    const newSelected = localSelected.includes(option)
+      ? localSelected.filter(item => item !== option)
+      : [...localSelected, option];
     
-    const newSelected = safeSelected.includes(option)
-      ? safeSelected.filter(item => item !== option)
-      : [...safeSelected, option];
+    setLocalSelected(newSelected);
     
-    console.log('New selected:', newSelected);
-    onSelectionChange(newSelected);
+    // If not deferred, emit immediately
+    if (!deferChangeUntilClose) {
+      onSelectionChange(newSelected);
+    }
   };
 
   const clearAll = () => {
-    console.log('=== CLEAR ALL FILTERS ===');
-    console.log('Label:', label);
-    onSelectionChange([]);
+    setLocalSelected([]);
+    if (!deferChangeUntilClose) {
+      onSelectionChange([]);
+    }
   };
 
   const selectAll = () => {
-    console.log('=== SELECT ALL FILTERS ===');
-    console.log('Label:', label);
-    console.log('All options:', filteredOptions);
-    onSelectionChange(filteredOptions);
+    setLocalSelected(filteredOptions);
+    if (!deferChangeUntilClose) {
+      onSelectionChange(filteredOptions);
+    }
   };
 
   const removeItem = (item: string, event: React.MouseEvent) => {
     event.stopPropagation();
     event.preventDefault();
-    console.log('=== REMOVE ITEM ===');
-    console.log('Item:', item);
-    console.log('Label:', label);
-    console.log('Current selected prop:', selected);
-    console.log('Current safeSelected:', safeSelected);
     
-    // Use the original selected prop to ensure we're working with the latest data
-    const newSelected = selected.filter(selectedItem => selectedItem !== item);
-    console.log('New selected after removal:', newSelected);
+    const newSelected = localSelected.filter(selectedItem => selectedItem !== item);
+    setLocalSelected(newSelected);
     
-    onSelectionChange(newSelected);
+    if (!deferChangeUntilClose) {
+      onSelectionChange(newSelected);
+    }
   };
 
   // Focus search input when opened
@@ -106,9 +108,18 @@ const CustomMultiSelectFilter = ({
     }
   }, [open]);
 
+  const handleOpenChange = (next: boolean) => {
+    if (open && !next && deferChangeUntilClose) {
+      // Commit local changes when closing
+      onSelectionChange(localSelected);
+    }
+    setOpen(next);
+    onOpenChange?.(next);
+  };
+
   return (
     <div className="w-full">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"

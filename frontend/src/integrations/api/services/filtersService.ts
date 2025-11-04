@@ -129,17 +129,18 @@ export class FiltersService {
   }
 
   // GET /api/v1/filters/cascading - Get cascaded options for current selections
+  // Accepts comma-separated string IDs for multiple selections
   static async getCascadingOptions(params: Partial<{
-    branch_id: number;
-    tl_id: number;
-    rm_id: number;
-    source_tl_id: number;
-    source_rm_id: number;
-    dealer_id: number;
-    lender_id: number;
+    branch_id: string;
+    tl_id: string;
+    rm_id: string;
+    source_tl_id: string;
+    source_rm_id: string;
+    dealer_id: string;
+    lender_id: string;
   }>): Promise<CascadingResponse> {
     const qs = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => v !== undefined && v !== null) as [string, string | number][]
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null) as [string, string][]
     ).toString();
 
     const response = await fetch(
