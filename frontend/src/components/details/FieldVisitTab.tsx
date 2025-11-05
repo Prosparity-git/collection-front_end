@@ -51,6 +51,9 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
   const [selectedVisitForMap, setSelectedVisitForMap] = useState<FieldVisitLocation | null>(null);
   const [showMapDialog, setShowMapDialog] = useState(false);
   const [selfieUrlsByVisit, setSelfieUrlsByVisit] = useState<Record<number, string[]>>({});
+  const [selfieBlobUrlsByVisit, setSelfieBlobUrlsByVisit] = useState<Record<number, string[]>>({});
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const [showImageDialog, setShowImageDialog] = useState(false);
   const [autoStartCaptureVisitId, setAutoStartCaptureVisitId] = useState<number | null>(null);
   const [allowCapture, setAllowCapture] = useState<boolean>(false);
   const [selfieDocCategoryId, setSelfieDocCategoryId] = useState<number | null>(null);
@@ -87,25 +90,73 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
     loadFieldVisits();
   }, [loadFieldVisits]);
 
-  // Load all docs by loan and group by field_visit_location_id to show under each visit
+  // Map signed URLs to Blob URLs for safe rendering without exposing credentials
   useEffect(() => {
+    let cleanupUrls: string[] = [];
+
+    const mapSignedUrlsToBlobs = async (docs: Array<{ url: string; field_visit_location_id: number }>) => {
+      const byVisit: Record<number, string[]> = {};
+      const blobByVisit: Record<number, string[]> = {};
+      const cleanup: string[] = [];
+
+      for (const d of docs) {
+        const visitId = d.field_visit_location_id;
+        if (!visitId) continue;
+
+        if (!byVisit[visitId]) byVisit[visitId] = [];
+        byVisit[visitId].push(d.url);
+
+        try {
+          const res = await fetch(d.url, { method: 'GET' });
+          if (!res.ok) {
+            console.error('Failed to fetch signed URL for visit', visitId, res.status);
+            continue;
+          }
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          if (!blobByVisit[visitId]) blobByVisit[visitId] = [];
+          blobByVisit[visitId].push(blobUrl);
+          cleanup.push(blobUrl);
+        } catch (e) {
+          console.error('Error fetching image blob:', e);
+        }
+      }
+
+      return { byVisit, blobByVisit, cleanup };
+    };
+
     const run = async () => {
       if (!applicationId) return;
       try {
         const docs = await DocumentService.listByLoan(applicationId);
-        const map: Record<number, string[]> = {};
-        for (const d of docs) {
-          const visitId = (d as any).field_visit_location_id as number | undefined;
-          if (!visitId) continue;
-          if (!map[visitId]) map[visitId] = [];
-          map[visitId].push(d.url);
-        }
-        setSelfieUrlsByVisit(map);
+        const { byVisit, blobByVisit, cleanup } = await mapSignedUrlsToBlobs(
+          docs.map(d => ({
+            url: d.url,
+            field_visit_location_id: (d as any).field_visit_location_id as number
+          }))
+        );
+
+        // Revoke previous blob URLs before setting new ones
+        setSelfieBlobUrlsByVisit(prev => {
+          Object.values(prev).forEach(urls => urls.forEach(URL.revokeObjectURL));
+          return blobByVisit;
+        });
+        setSelfieUrlsByVisit(byVisit);
+        cleanupUrls = cleanup;
       } catch (err) {
         console.error('Failed to load documents by loan:', err);
       }
     };
+
     void run();
+
+    return () => {
+      cleanupUrls.forEach(URL.revokeObjectURL);
+      setSelfieBlobUrlsByVisit(prev => {
+        Object.values(prev).forEach(urls => urls.forEach(URL.revokeObjectURL));
+        return {};
+      });
+    };
   }, [applicationId, fieldVisits.length]);
 
   // TODO: Fetch selfieDocCategoryId from backend or constants
@@ -435,6 +486,25 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                       ...prev,
                       [fieldVisits[0].id]: [url, ...(prev[fieldVisits[0].id] || [])]
                     }));
+                    // Immediately fetch the uploaded image and create a blob URL
+                    // so the UI updates in real-time without exposing signed URL
+                    (async () => {
+                      try {
+                        const res = await fetch(url, { method: 'GET' });
+                        if (!res.ok) {
+                          console.error('Failed to fetch uploaded selfie for blob conversion', res.status);
+                          return;
+                        }
+                        const blob = await res.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        setSelfieBlobUrlsByVisit(prev => ({
+                          ...prev,
+                          [fieldVisits[0].id]: [blobUrl, ...(prev[fieldVisits[0].id] || [])]
+                        }));
+                      } catch (e) {
+                        console.error('Error converting uploaded selfie to blob URL:', e);
+                      }
+                    })();
                     // Reset auto-start immediately after upload - prevents auto-start on refresh
                     setAutoStartCaptureVisitId(null);
                     setAllowCapture(false); // hide camera until the next visit is created
@@ -514,23 +584,37 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                     </div>
 
                     {/* Selfies for this visit - clickable to open */}
-                    {selfieUrlsByVisit[visit.id] && selfieUrlsByVisit[visit.id].length > 0 && (
+                    {selfieBlobUrlsByVisit[visit.id] && selfieBlobUrlsByVisit[visit.id].length > 0 ? (
                       <div className="grid grid-cols-3 gap-2 pt-1">
-                        {selfieUrlsByVisit[visit.id].map((u, idx) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img 
-                            key={idx} 
-                            src={u} 
-                            alt={`selfie-${idx + 1}`} 
-                            className="w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity" 
-                            onClick={() => window.open(u, '_blank')}
-                            onError={(e) => {
-                              console.error('Failed to load selfie image:', u);
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
+                        {selfieBlobUrlsByVisit[visit.id].map((blobUrl, idx) => (
+                          <div key={idx} className="relative w-full h-20 rounded overflow-hidden bg-gray-100 border">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={blobUrl}
+                              alt={`selfie-${idx + 1}`}
+                              className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                setSelectedImageUrl(blobUrl);
+                                setShowImageDialog(true);
+                              }}
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `
+                                    <div class="w-full h-full flex items-center justify-center bg-red-50 border border-red-200 rounded">
+                                      <span class="text-xs text-red-600 text-center px-1">Failed to load</span>
+                                    </div>
+                                  `;
+                                }
+                              }}
+                            />
+                          </div>
                         ))}
                       </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 italic pt-1">No selfies for this visit</div>
                     )}
                   </div>
                 </div>
@@ -593,6 +677,16 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                 />
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={selectedImageUrl} alt="Selfie" className="max-w-full max-h-[70vh] object-contain" />
           )}
         </DialogContent>
       </Dialog>

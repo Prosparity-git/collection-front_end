@@ -868,32 +868,38 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       }
     }
     
-    // OTP should only be triggered when:
-    // 1. User selects status "Partially Paid" (value '2') OR "Paid" (value '6')
-    // 2. AND user enters an amount > 0
-    // 3. If status is already Partially Paid and user only changes PTP date without entering amount, NO OTP
-    // 4. If user submits without changing status or entering amount, NO OTP
-    const requiresOtp = isTargetStatus2Or6 && hasAmountEntered;
-    
-    // If status is '6' (Paid), validate total amount >= EMI BEFORE opening OTP modal
-    if (targetStatus === '6' && hasAmountEntered) {
+    // Enforce rules per requirements
+    // 1) Partially Paid without amount -> error, no submission
+    if (targetStatus === '2' && !hasAmountEntered) {
+      toast.error('Please enter amount for Partially Paid.');
+      return;
+    }
+
+    // 2) Paid: validate total >= EMI first (even if no amount entered)
+    if (targetStatus === '6') {
       const existingAmount = Number(application.amount_collected) || 0;
-      const totalAmount = existingAmount + amountValue;
+      const totalAmount = existingAmount + (hasAmountEntered ? amountValue : 0);
       const emiAmount = application.emi_amount || 0;
-      
       if (totalAmount < emiAmount) {
         toast.error(`Amount collected must be >= EMI (₹${emiAmount.toLocaleString('en-IN')}) for Paid`);
         return;
       }
+      // Paid with amount -> OTP required; Paid without amount -> no OTP
+      if (hasAmountEntered) {
+        setShowOtpModal(true);
+        return;
+      }
+      await performStatusUpdate();
+      return;
     }
-    
-    // If OTP is required, show modal; otherwise proceed with submission
-    if (requiresOtp) {
+
+    // 3) Partially Paid with amount -> OTP required
+    if (targetStatus === '2' && hasAmountEntered) {
       setShowOtpModal(true);
       return;
     }
-    
-    // Allow submission without OTP if no status change or no amount entered
+
+    // 4) Other statuses or only PTP changes -> no OTP, direct submission
     await performStatusUpdate();
   };
 
