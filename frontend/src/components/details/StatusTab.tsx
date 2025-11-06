@@ -21,6 +21,7 @@ import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { getStatusLabel } from '@/utils/statusMapping';
 import RecentActivityCard from "./RecentActivityCard";
 import OTPVerificationModal from '@/components/OTPVerificationModal';
+import PaymentSuccessModal from '@/components/PaymentSuccessModal';
 import { useLoanRecentActivity } from '@/hooks/useRecentActivity';
 
 interface StatusTabProps {
@@ -98,6 +99,32 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [paymentSuccessData, setPaymentSuccessData] = useState<{
+    amount?: number;
+    status?: string;
+  }>({});
+  
+  // Track initial form values to detect changes
+  const [initialFormData, setInitialFormData] = useState({
+    repaymentStatus: '',
+    ptpDate: '',
+    amountCollected: ''
+  });
+  
+  // Check if any changes have been made to the form
+  const hasChanges = useMemo(() => {
+    const statusChanged = formData.repaymentStatus !== initialFormData.repaymentStatus;
+    
+    // For PTP date, treat 'clear' as a change if initial value is not empty
+    const ptpDateChanged = formData.ptpDate === 'clear' 
+      ? initialFormData.ptpDate !== '' 
+      : formData.ptpDate !== initialFormData.ptpDate;
+    
+    const amountChanged = formData.amountCollected !== initialFormData.amountCollected;
+    
+    return statusChanged || ptpDateChanged || amountChanged;
+  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, initialFormData]);
   
   // Get the actual status label for display
   const statusLabel = useMemo(() => {
@@ -143,6 +170,11 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       console.log('🔄 StatusTab: Mapped status to dropdown value:', { currentStatus, mappedValue });
       
       setFormData(prev => ({
+        ...prev,
+        repaymentStatus: mappedValue
+      }));
+      // Also update initial form data when currentStatus changes from API
+      setInitialFormData(prev => ({
         ...prev,
         repaymentStatus: mappedValue
       }));
@@ -311,6 +343,18 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         ...prev,
         ...updates
       }));
+      // Also set initial form data to track changes
+      setInitialFormData(prev => ({
+        ...prev,
+        ...updates
+      }));
+    } else {
+      // Even if no updates, set initial form data to current empty state
+      setInitialFormData({
+        repaymentStatus: '',
+        ptpDate: '',
+        amountCollected: ''
+      });
     }
     
   }, []); // Empty dependency array - only run on mount
@@ -397,6 +441,18 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         ...prev,
         ...updates
       }));
+      // Also update initial form data to track changes when application changes
+      setInitialFormData(prev => ({
+        ...prev,
+        ...updates
+      }));
+    } else {
+      // Even if no updates, reset initial form data to current empty state
+      setInitialFormData({
+        repaymentStatus: '',
+        ptpDate: '',
+        amountCollected: ''
+      });
     }
   }, [application.status, application.ptp_date, application.amount_collected, selectedMonth]);
 
@@ -765,9 +821,24 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           amountCollected: ''
         }));
         
+        // Also update initial form data to reflect the cleared state
+        setInitialFormData(prev => ({
+          ...prev,
+          amountCollected: ''
+        }));
+        
         // Notify realtime updates with the new total
         notifyAmountCollectedUpdate(application.applicant_id, totalAmount);
       }
+      
+      // Update initial form data after successful submission to reflect new state
+      // This ensures the submit button is disabled until user makes new changes
+      setInitialFormData(prev => ({
+        ...prev,
+        repaymentStatus: formData.repaymentStatus || prev.repaymentStatus,
+        ptpDate: formData.ptpDate === 'clear' ? '' : (formData.ptpDate || prev.ptpDate),
+        amountCollected: hasAmountCollected ? '' : prev.amountCollected
+      }));
 
       // Add audit logs for changed fields
       
@@ -816,7 +887,20 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         refetchStatusCounts();
       }
 
-      toast.success('Status updated successfully!');
+      // Show payment success modal if amount was collected for Paid or Partially Paid status
+      const submittedStatus = formData.repaymentStatus || mapBackendStatusToDropdownValue(currentStatus);
+      const isPaidOrPartiallyPaid = submittedStatus === '2' || submittedStatus === '6';
+      
+      if (hasAmountCollected && isPaidOrPartiallyPaid) {
+        const amountValue = parseFloat(formData.amountCollected);
+        setPaymentSuccessData({
+          amount: amountValue,
+          status: submittedStatus
+        });
+        setShowPaymentSuccessModal(true);
+      } else {
+        toast.success('Status updated successfully!');
+      }
       
     } catch (error) {
       console.error('❌ Failed to submit status update:', error);
@@ -1080,7 +1164,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
             <div className="pt-4">
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || isLocked}
+                disabled={isSubmitting || isLocked || !hasChanges}
                 className="w-full"
                 size="lg"
               >
@@ -1180,6 +1264,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       }}
       application={application}
       amount={parseFloat(formData.amountCollected || '0') || 0}
+    />
+    
+    <PaymentSuccessModal
+      open={showPaymentSuccessModal}
+      onClose={() => {
+        setShowPaymentSuccessModal(false);
+        setPaymentSuccessData({});
+      }}
+      amount={paymentSuccessData.amount}
+      status={paymentSuccessData.status}
     />
     </div>
   );
