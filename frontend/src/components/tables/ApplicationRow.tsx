@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Application } from "@/types/application";
 import { formatEmiMonth, formatCurrency, formatPtpDate } from "@/utils/formatters";
+import { Check, X } from "lucide-react";
 
 import StatusBadge from "./StatusBadge";
 import ApplicationDetails from "./ApplicationDetails";
@@ -107,19 +108,55 @@ const ApplicationRow = memo(({
             <VehicleStatusBadge vehicleStatus={application.vehicle_status} />
           </div>
           <span className="text-xs text-gray-700">ID: {application.applicant_id}</span>
+          <span className="text-xs text-gray-700">
+            EMI Amount: {application.emi_amount != null && !isNaN(application.emi_amount) ? formatCurrency(application.emi_amount) : 'N/A'}
+          </span>
           <span className="text-xs text-gray-700">EMI Month: {formatEmiMonth(selectedEmiMonth ? selectedEmiMonth : application.emi_month)}</span>
+          <span className="text-xs text-gray-700">Branch: {application.branch_name}</span>
+          <span className="text-xs text-gray-700">
+            RM: {application.rm_name || 'N/A'}, TL: {application.team_lead || 'N/A'}
+          </span>
           <span className="text-xs text-gray-700">Repayment Number: {application.demand_num || 'N/A'}</span>
           <span className="text-xs text-gray-700">Current DPD Bucket: {application.current_dpd_bucket ?? 'X'}</span>
-          <span className="text-xs text-gray-700">Branch: {application.branch_name}</span>
-          <span className="text-xs text-gray-700">TL: {application.team_lead}</span>
-          <span className="text-xs text-gray-700">RM: {application.rm_name}</span>
-          <span className="text-xs text-gray-700">Dealer: {application.dealer_name}</span>
+          {/* NACH Status */}
+          {application.nach_status !== undefined && application.nach_status !== null && (
+            <>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-700">NACH Status: </span>
+                {Number(application.nach_status) === 1 ? (
+                  <Check className="h-3 w-3 text-green-600" />
+                ) : (
+                  <X className="h-3 w-3 text-red-600" />
+                )}
+              </div>
+              {Number(application.nach_status) !== 1 && application.reason && (
+                <span className="text-xs text-gray-700">Reason: {application.reason}</span>
+              )}
+            </>
+          )}
         </div>
       </TableCell>
 
-      {/* EMI Amount */}
-      <TableCell className="py-4 align-top text-center text-blue-600 font-semibold text-base w-[10%]">
-        {formatCurrency(application.emi_amount)}
+      {/* Overdue */}
+      <TableCell className="py-4 align-top text-center w-[14%]">
+        <div className="flex flex-col gap-1 items-center">
+          <div className="text-sm">
+            <span className="text-gray-600">LMS: </span>
+            <span className="font-semibold text-blue-600">
+              {application.total_overdue_amount != null && !isNaN(application.total_overdue_amount)
+                ? `${application.total_overdue_amount.toLocaleString('en-IN')}/-`
+                : 'N/A'}
+            </span>
+          </div>
+          <div className="text-sm">
+            <span className="text-gray-600">Current: </span>
+            <span className="font-semibold text-blue-600">
+              {application.current_overdue_amount != null && !isNaN(application.current_overdue_amount)
+                ? `${application.current_overdue_amount.toLocaleString('en-IN')}/-`
+                : 'N/A'}
+            </span>
+          </div>
+        </div>
       </TableCell>
 
       {/* Status */}

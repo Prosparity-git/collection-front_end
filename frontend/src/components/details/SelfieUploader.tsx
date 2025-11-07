@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Loader2, Camera, Upload, RefreshCw } from 'lucide-react';
+import { Loader2, Camera, Check, X } from 'lucide-react';
 import { DocumentService } from '@/integrations/api/services';
 import type { ImageMimeType } from '@/types/documents';
 
@@ -36,6 +35,7 @@ export function SelfieUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  
 
   useEffect(() => {
     return () => {
@@ -47,7 +47,6 @@ export function SelfieUploader({
   // This ensures camera doesn't auto-start on page load or refresh
   useEffect(() => {
     if (autoStart && !isCameraOn && !capturedBlob && !previewUrl) {
-      console.log('Auto-starting camera after visit creation');
       startCamera();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,7 +59,12 @@ export function SelfieUploader({
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (playError) {
+          // Ignore play() interruption errors - they're harmless
+          // This can happen when the video element is reset or stream changes
+        }
       }
       setIsCameraOn(true);
     } catch (e: any) {
@@ -165,56 +169,60 @@ export function SelfieUploader({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     if (isCameraOn) stopCamera();
+    // Immediately restart camera for retake
+    setTimeout(() => {
+      startCamera();
+    }, 100);
   };
 
   return (
     <Card>
       <CardContent className="pt-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm">Selfie Capture</Label>
-          {previewUrl && (
-            <Button variant="outline" size="sm" onClick={reset} disabled={isUploading}>
-              <RefreshCw className="h-4 w-4 mr-1" /> Reset
-            </Button>
-          )}
-        </div>
-
-        {/* Live camera or captured preview */}
-        <div className="w-full aspect-square bg-gray-50 border rounded-lg flex items-center justify-center overflow-hidden">
+        <div className="relative w-full aspect-square bg-gray-50 border rounded-lg flex items-center justify-center overflow-hidden">
           {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt="preview" className="object-cover w-full h-full" />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={previewUrl} alt="preview" className="object-cover w-full h-full" />
+              {/* Red cross button on top right corner to retake */}
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                onClick={reset}
+                disabled={isUploading}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
           ) : (
             <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
-          {!isCameraOn ? (
-            <Button onClick={startCamera} disabled={isUploading} className="flex-1">
-              <Camera className="h-4 w-4 mr-2" /> Start Camera
-            </Button>
-          ) : (
-            <Button onClick={capturePhoto} disabled={isUploading} className="flex-1">
-              <Camera className="h-4 w-4 mr-2" /> Capture Photo
-            </Button>
-          )}
-          <Button onClick={doUpload} disabled={!capturedBlob || isUploading} className="flex-1">
+        {!isCameraOn ? (
+          <Button onClick={startCamera} disabled={isUploading} className="w-full h-12">
+            <Camera className="h-4 w-4 mr-2" /> Start Camera
+          </Button>
+        ) : !previewUrl ? (
+          <Button onClick={capturePhoto} disabled={isUploading} className="w-full h-12">
+            <Camera className="h-4 w-4 mr-2" /> Capture
+          </Button>
+        ) : (
+          <Button onClick={doUpload} disabled={isUploading} className="w-full h-12 bg-green-600 hover:bg-green-700 text-white">
             {isUploading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...
               </>
             ) : (
               <>
-                <Upload className="h-4 w-4 mr-2" /> Upload
+                <Check className="h-4 w-4 mr-2" /> Done
               </>
             )}
           </Button>
-        </div>
+        )}
 
         {error && <div className="text-xs text-red-600">{error}</div>}
-        <div className="text-[11px] text-gray-500">Live capture only. Image may be compressed on device.</div>
       </CardContent>
     </Card>
   );

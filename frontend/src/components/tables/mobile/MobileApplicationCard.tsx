@@ -3,7 +3,7 @@ import { Application } from "@/types/application";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPtpDate, formatEmiMonth } from "@/utils/formatters";
-import { Phone, Eye, Building, User } from "lucide-react";
+import { Phone, Eye, Building, User, UserCircle, IndianRupee, Check, X, Hash, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommentsService } from "@/integrations/api/services/commentsService";
 import { COMMENT_TYPES } from "@/integrations/api/services/commentsService";
@@ -158,11 +158,28 @@ const MobileApplicationCard = memo(({
           </div>
         </div>
 
-        {/* EMI Amount Section - Prominent blue box */}
+        {/* Overdue Section - Prominent blue box */}
         <div className="mb-4">
           <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-3">
-            <p className="text-sm text-gray-600 mb-1">EMI Amount</p>
-            <p className="text-xl font-bold text-blue-800">{formatCurrency(application.emi_amount)}</p>
+            <p className="text-lg text-gray-600 mb-2 font-medium">Overdue</p>
+            <div className="flex flex-col gap-0.5">
+              <div className="text-sm">
+                <span className="text-gray-600">LMS: </span>
+                <span className="text-base font-bold text-blue-800">
+                  {application.total_overdue_amount != null && !isNaN(application.total_overdue_amount)
+                    ? `${application.total_overdue_amount.toLocaleString('en-IN')}/-`
+                    : 'N/A'}
+                </span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Current: </span>
+                <span className="text-base font-bold text-blue-800">
+                  {application.current_overdue_amount != null && !isNaN(application.current_overdue_amount)
+                    ? `${application.current_overdue_amount.toLocaleString('en-IN')}/-`
+                    : 'N/A'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -170,39 +187,16 @@ const MobileApplicationCard = memo(({
         {/* Application Details */}
         <div className="mb-4">
           <div className="grid grid-cols-2 gap-3">
-            {/* Dealer */}
+            {/* EMI Amount */}
             <div className="flex items-start gap-2">
-              <Building className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <IndianRupee className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
               <div className="min-w-0">
-                <div className="text-sm text-gray-600">Dealer:</div>
-                <div className="text-sm font-medium break-words">{application.dealer_name}</div>
-              </div>
-            </div>
-            
-            {/* RM */}
-            <div className="flex items-start gap-2">
-              <User className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-              <div className="min-w-0">
-                <div className="text-sm text-gray-600">RM:</div>
-                <div className="text-sm font-medium break-words">{application.rm_name}</div>
-              </div>
-            </div>
-            
-            {/* Repayment Number */}
-            <div className="flex items-start gap-2">
-              <div className="h-4 w-4 flex-shrink-0 mt-0.5"></div>
-              <div className="min-w-0">
-                <div className="text-sm text-gray-600">Repayment Number:</div>
-                <div className="text-sm font-medium">{application.demand_num || 'N/A'}</div>
-              </div>
-            </div>
-
-            {/* Current DPD Bucket */}
-            <div className="flex items-start gap-2">
-              <div className="h-4 w-4 flex-shrink-0 mt-0.5"></div>
-              <div className="min-w-0">
-                <div className="text-sm text-gray-600">Current DPD Bucket:</div>
-                <div className="text-sm font-medium">{application.current_dpd_bucket ?? 'X'}</div>
+                <div className="text-sm text-gray-600">EMI Amount:</div>
+                <div className="text-sm font-medium break-words">
+                  {application.emi_amount != null && !isNaN(application.emi_amount)
+                    ? formatCurrency(application.emi_amount)
+                    : 'N/A'}
+                </div>
               </div>
             </div>
             
@@ -214,6 +208,70 @@ const MobileApplicationCard = memo(({
                 <div className="text-sm font-medium break-words">{application.branch_name}</div>
               </div>
             </div>
+
+            {/* RM */}
+            <div className="flex items-start gap-2">
+              <User className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">RM:</div>
+                <div className="text-sm font-medium break-words">{application.rm_name}</div>
+              </div>
+            </div>
+
+            {/* TL */}
+            <div className="flex items-start gap-2">
+              <UserCircle className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">TL:</div>
+                <div className="text-sm font-medium break-words">{application.tl_name ?? application.team_lead ?? 'N/A'}</div>
+              </div>
+            </div>
+            
+            {/* Repayment Number */}
+            <div className="flex items-start gap-2">
+              <Hash className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">Repayment Number:</div>
+                <div className="text-sm font-medium">{application.demand_num || 'N/A'}</div>
+              </div>
+            </div>
+
+            {/* Current DPD Bucket */}
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-gray-600">Current DPD Bucket:</div>
+                <div className="text-sm font-medium">{application.current_dpd_bucket ?? 'X'}</div>
+              </div>
+            </div>
+
+            {/* NACH Status */}
+            {application.nach_status !== undefined && application.nach_status !== null && (
+              <div className="flex items-start gap-2">
+                <CreditCard className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-gray-600">NACH Status:</span>
+                    {Number(application.nach_status) === 1 ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <X className="h-4 w-4 text-red-600" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Reason - only show if nach_status is not 1 */}
+            {application.nach_status !== undefined && application.nach_status !== null && Number(application.nach_status) !== 1 && application.reason && (
+              <div className="flex items-start gap-2">
+                <div className="h-4 w-4 flex-shrink-0 mt-0.5"></div>
+                <div className="min-w-0">
+                  <div className="text-sm text-gray-600">Reason:</div>
+                  <div className="text-sm font-medium break-words">{application.reason}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

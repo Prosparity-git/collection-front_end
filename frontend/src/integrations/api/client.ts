@@ -132,6 +132,10 @@ interface ApiApplicationItem {
   repossession_sale_date?: string; // Vehicle repossession sale date
   repossession_sale_amount?: number; // Vehicle repossession sale amount
   current_dpd_bucket?: string | null; // Current DPD bucket
+  total_overdue_amount?: number; // Total overdue amount from backend
+  current_overdue_amount?: number; // Current overdue amount from backend
+  nach_status?: number; // NACH status (1 = success, 2+ = failure)
+  reason?: string | null; // Reason for NACH failure
 }
 
 interface ApiFilteredResponse {
@@ -149,6 +153,7 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     applicant_name: apiItem.applicant_name,
     branch_name: apiItem.branch,
     team_lead: apiItem.tl_name,
+    tl_name: apiItem.tl_name,
     rm_name: apiItem.rm_name,
     dealer_name: apiItem.dealer,
     lender_name: apiItem.lender,
@@ -207,7 +212,13 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     repossession_date: apiItem.repossession_date || null,
     repossession_sale_date: apiItem.repossession_sale_date || null,
     repossession_sale_amount: apiItem.repossession_sale_amount || null,
-    current_dpd_bucket: (apiItem as any).current_dpd_bucket ?? null
+    current_dpd_bucket: (apiItem as any).current_dpd_bucket ?? null,
+    total_overdue_amount: (apiItem as any).total_overdue_amount ?? null,
+    current_overdue_amount: (apiItem as any).current_overdue_amount ?? null,
+    nach_status: apiItem.nach_status !== undefined && apiItem.nach_status !== null 
+      ? (typeof apiItem.nach_status === 'string' ? parseInt(apiItem.nach_status, 10) : apiItem.nach_status)
+      : undefined,
+    reason: apiItem.reason ?? null
   };
 }
 
