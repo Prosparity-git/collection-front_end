@@ -39,7 +39,7 @@ interface StatusTabProps {
 // New repayment status options (collection status)
 const REPAYMENT_STATUS_OPTIONS = [
   { value: "1", label: "Future", disabled: true },
-  { value: "4", label: "Overdue" },
+  { value: "4", label: "Overdue", disabled: true },
   { value: "2", label: "Partially Paid" },
   { value: "5", label: "Foreclose" },
   { value: "6", label: "Paid" }
