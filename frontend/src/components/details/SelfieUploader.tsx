@@ -8,10 +8,11 @@ import type { ImageMimeType } from '@/types/documents';
 type Props = {
   applicantId: string;
   loanApplicationId: number;
-  fieldVisitLocationId: number;
+  fieldVisitLocationId?: number;
+  getFieldVisitId?: () => Promise<number>;
   selfieDocCategoryId: number; // cache and pass from parent
   repaymentId?: number;
-  onUploaded?: (finalUrl: string) => void;
+  onUploaded?: (finalUrl: string, fieldVisitId?: number) => void;
   autoStart?: boolean;
   visitTypeLabel?: string; // e.g. "Customer Visit - House"
 };
@@ -22,6 +23,7 @@ export function SelfieUploader({
   applicantId,
   loanApplicationId,
   fieldVisitLocationId,
+  getFieldVisitId,
   selfieDocCategoryId,
   repaymentId,
   onUploaded,
@@ -35,6 +37,7 @@ export function SelfieUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [resolvedVisitId, setResolvedVisitId] = useState<number | null>(fieldVisitLocationId ?? null);
   
 
   useEffect(() => {
@@ -42,6 +45,12 @@ export function SelfieUploader({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    if (fieldVisitLocationId && fieldVisitLocationId !== resolvedVisitId) {
+      setResolvedVisitId(fieldVisitLocationId);
+    }
+  }, [fieldVisitLocationId, resolvedVisitId]);
 
   // Auto start camera ONLY when explicitly requested (after successful visit)
   // This ensures camera doesn't auto-start on page load or refresh
@@ -121,18 +130,32 @@ export function SelfieUploader({
     return blob || original;
   };
 
+  const ensureFieldVisitId = async (): Promise<number> => {
+    if (resolvedVisitId) return resolvedVisitId;
+    if (!getFieldVisitId) {
+      throw new Error('Field visit reference missing. Please retry recording.');
+    }
+    const id = await getFieldVisitId();
+    if (!id) {
+      throw new Error('Invalid field visit reference received.');
+    }
+    setResolvedVisitId(id);
+    return id;
+  };
+
   const doUpload = async () => {
     if (!capturedBlob) return;
     setIsUploading(true);
     setError(null);
     try {
+      const activeVisitId = await ensureFieldVisitId();
       const compressed = await compressIfNeeded(capturedBlob);
       const contentType = 'image/jpeg' as ImageMimeType;
       const filename = `selfie-${Date.now()}.${contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'}`;
 
       const presignRes = await DocumentService.presign({
         loan_application_id: loanApplicationId,
-        field_visit_location_id: fieldVisitLocationId,
+        field_visit_location_id: activeVisitId,
         filename,
         content_type: contentType,
         visit_type: visitTypeLabel,
@@ -143,7 +166,7 @@ export function SelfieUploader({
       const finalized = await DocumentService.finalize({
         applicant_id: applicantId,
         loan_application_id: loanApplicationId,
-        field_visit_location_id: fieldVisitLocationId,
+        field_visit_location_id: activeVisitId,
         doc_category_id: selfieDocCategoryId,
         file_name: filename,
         s3_key: presignRes.s3_key,
@@ -152,7 +175,7 @@ export function SelfieUploader({
         size_bytes: compressed.size,
       });
 
-      if (onUploaded) onUploaded(finalized.url);
+      if (onUploaded) onUploaded(finalized.url, activeVisitId);
       // Replace local preview with server URL
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(finalized.url);

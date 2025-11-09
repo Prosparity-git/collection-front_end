@@ -161,21 +161,33 @@ const MobileApplicationCard = memo(({
         {/* Overdue Section - Prominent blue box */}
         <div className="mb-4">
           <div className="border-2 border-blue-200 bg-blue-50 rounded-lg p-3">
-            <p className="text-lg text-gray-600 mb-2 font-medium">Overdue</p>
+            <p className="text-lg text-gray-600 mb-2 font-medium">Overdue Amount</p>
             <div className="flex flex-col gap-0.5">
-              <div className="text-sm">
-                <span className="text-gray-600">LMS: </span>
-                <span className="text-base font-bold text-blue-800">
+              <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
+                <span className="text-gray-600">LMS</span>
+                <span className="text-gray-600">:</span>
+                <span className="text-base font-bold text-blue-800 inline-flex items-center gap-1">
                   {application.total_overdue_amount != null && !isNaN(application.total_overdue_amount)
-                    ? `${application.total_overdue_amount.toLocaleString('en-IN')}/-`
+                    ? (
+                      <>
+                        <IndianRupee className="h-4 w-4" />
+                        {`${application.total_overdue_amount.toLocaleString('en-IN')}/-`}
+                      </>
+                    )
                     : 'N/A'}
                 </span>
               </div>
-              <div className="text-sm">
-                <span className="text-gray-600">Current: </span>
-                <span className="text-base font-bold text-blue-800">
+              <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
+                <span className="text-gray-600">Current</span>
+                <span className="text-gray-600">:</span>
+                <span className="text-base font-bold text-blue-800 inline-flex items-center gap-1">
                   {application.current_overdue_amount != null && !isNaN(application.current_overdue_amount)
-                    ? `${application.current_overdue_amount.toLocaleString('en-IN')}/-`
+                    ? (
+                      <>
+                        <IndianRupee className="h-4 w-4" />
+                        {`${application.current_overdue_amount.toLocaleString('en-IN')}/-`}
+                      </>
+                    )
                     : 'N/A'}
                 </span>
               </div>

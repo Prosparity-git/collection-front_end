@@ -2,7 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Application } from "@/types/application";
 import { formatEmiMonth, formatCurrency, formatPtpDate } from "@/utils/formatters";
-import { Check, X } from "lucide-react";
+import { Check, X, IndianRupee } from "lucide-react";
 
 import StatusBadge from "./StatusBadge";
 import ApplicationDetails from "./ApplicationDetails";
@@ -140,19 +140,31 @@ const ApplicationRow = memo(({
       {/* Overdue */}
       <TableCell className="py-4 align-top text-center w-[14%]">
         <div className="flex flex-col gap-1 items-center">
-          <div className="text-sm">
-            <span className="text-gray-600">LMS: </span>
-            <span className="font-semibold text-blue-600">
+          <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
+            <span className="text-gray-600">LMS</span>
+            <span className="text-gray-600">:</span>
+            <span className="font-semibold text-blue-600 inline-flex items-center gap-1">
               {application.total_overdue_amount != null && !isNaN(application.total_overdue_amount)
-                ? `${application.total_overdue_amount.toLocaleString('en-IN')}/-`
+                ? (
+                  <>
+                    <IndianRupee className="h-4 w-4" />
+                    {`${application.total_overdue_amount.toLocaleString('en-IN')}/-`}
+                  </>
+                )
                 : 'N/A'}
             </span>
           </div>
-          <div className="text-sm">
-            <span className="text-gray-600">Current: </span>
-            <span className="font-semibold text-blue-600">
+          <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
+            <span className="text-gray-600">Current</span>
+            <span className="text-gray-600">:</span>
+            <span className="font-semibold text-blue-600 inline-flex items-center gap-1">
               {application.current_overdue_amount != null && !isNaN(application.current_overdue_amount)
-                ? `${application.current_overdue_amount.toLocaleString('en-IN')}/-`
+                ? (
+                  <>
+                    <IndianRupee className="h-4 w-4" />
+                    {`${application.current_overdue_amount.toLocaleString('en-IN')}/-`}
+                  </>
+                )
                 : 'N/A'}
             </span>
           </div>

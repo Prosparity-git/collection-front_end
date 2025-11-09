@@ -54,9 +54,12 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
   const [selfieBlobUrlsByVisit, setSelfieBlobUrlsByVisit] = useState<Record<number, string[]>>({});
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [showImageDialog, setShowImageDialog] = useState(false);
-  const [autoStartCaptureVisitId, setAutoStartCaptureVisitId] = useState<number | null>(null);
   const [allowCapture, setAllowCapture] = useState<boolean>(false);
   const [selfieDocCategoryId, setSelfieDocCategoryId] = useState<number | null>(null);
+  const [pendingVisitPayload, setPendingVisitPayload] = useState<CreateFieldVisitRequest | null>(null);
+  const [pendingVisitRecord, setPendingVisitRecord] = useState<FieldVisitLocation | null>(null);
+  const [shouldAutoStartCapture, setShouldAutoStartCapture] = useState<boolean>(false);
+  const [creatingPendingVisit, setCreatingPendingVisit] = useState<boolean>(false);
 
   // Load field visits for this application
   const loadFieldVisits = useCallback(async () => {
@@ -77,6 +80,11 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
         payment_details_id: paymentId
       });
       setFieldVisits(visits);
+      setPendingVisitRecord(prev => {
+        if (!prev) return prev;
+        const match = visits.find(v => v.id === prev.id);
+        return match ?? prev;
+      });
       console.log('FieldVisitTab: Loaded visits', visits);
     } catch (error) {
       console.error('Failed to load field visits:', error);
@@ -167,7 +175,7 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
     const fetchSelfieDocCategoryId = async () => {
       // TODO: Replace with actual API call to get doc category ID for "SELFIE"
       // For now, using placeholder value
-      setSelfieDocCategoryId(1); // Replace with actual ID
+      setSelfieDocCategoryId(4); // Replace with actual ID
     };
     void fetchSelfieDocCategoryId();
   }, []);
@@ -227,66 +235,34 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
     }
   };
 
-  // Record field visit
-  const recordFieldVisit = async () => {
-    if (!locationData || !applicationId || !paymentId) {
-      setAlert({ type: 'error', message: 'Please get your location first' });
-      return;
+  const resolvePendingFieldVisitId = useCallback(async (): Promise<number> => {
+    if (pendingVisitRecord) {
+      return pendingVisitRecord.id;
+    }
+
+    if (!pendingVisitPayload) {
+      throw new Error('No pending field visit available. Please record location again.');
     }
 
     try {
-      setLoading(true);
-      setAlert(null);
-
-      const visitData: CreateFieldVisitRequest = {
-        loan_application_id: applicationId,
-        payment_details_id: paymentId,
-        visit_type_id: selectedVisitType,
-        latitude: roundCoordinate(locationData.latitude, 10), // Max 10 digits for latitude
-        longitude: roundCoordinate(locationData.longitude, 11) // Max 11 digits for longitude
-      };
-
-      const newVisit = await FieldVisitService.createFieldVisit(visitData);
-      
-      // Add to local state and auto-start camera for this visit
-      setFieldVisits(prev => [newVisit, ...prev]);
-      setAutoStartCaptureVisitId(newVisit.id);
-      setAllowCapture(true); // show camera/uploader only right after a successful visit
-      
-      setAlert({ 
-        type: 'success', 
-        message: `Field visit recorded successfully! Visit ID: ${newVisit.id}` 
-      });
-
-      toast.success('Field visit recorded successfully!');
-      
-      // Clear location data after successful recording
-      setLocationData(null);
-
+      setCreatingPendingVisit(true);
+      const newVisit = await FieldVisitService.createFieldVisit(pendingVisitPayload);
+      setPendingVisitRecord(newVisit);
+      setPendingVisitPayload(null);
+      return newVisit.id;
     } catch (error) {
-      console.error('Failed to record field visit:', error);
+      console.error('Failed to create field visit before selfie upload:', error);
       
-      // Parse error message to show user-friendly version
-      let errorMessage = 'Failed to record field visit';
+      let errorMessage = 'Failed to create field visit';
       if (error instanceof Error) {
         const errorText = error.message;
-        
-        // Extract distance from error message (Hindi text)
         const distanceMatch = errorText.match(/दूरी:\s*([\d,]+)\s*मीटर/);
-        const statusMatch = errorText.match(/Error creating field visit:\s*\d+:/);
         
         if (distanceMatch) {
           const distance = parseInt(distanceMatch[1].replace(/,/g, ''));
-          
-          // Show distance in meters if under 1000m, in kilometers if above 1000m
-          let distanceText;
-          if (distance < 1000) {
-            distanceText = `${distance} मीटर`;
-          } else {
-            const distanceKm = (distance / 1000).toFixed(1);
-            distanceText = `${distanceKm} किमी`;
-          }
-          
+          const distanceText = distance < 1000
+            ? `${distance} मीटर`
+            : `${(distance / 1000).toFixed(1)} किमी`;
           errorMessage = `ग्राहक के घर से बहुत दूर हैं (${distanceText})। कृपया 100 मीटर के दायरे में जाएं।`;
         } else {
           errorMessage = errorText;
@@ -295,9 +271,45 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
       
       setAlert({ type: 'error', message: errorMessage });
       toast.error(errorMessage);
+      throw error;
     } finally {
-      setLoading(false);
+      setCreatingPendingVisit(false);
     }
+  }, [pendingVisitPayload, pendingVisitRecord]);
+
+  // Record field visit
+  const recordFieldVisit = () => {
+    if (!applicationId || !paymentId) {
+      setAlert({ type: 'error', message: 'Missing required identifiers to record visit.' });
+      return;
+    }
+
+    if (!locationData) {
+      setAlert({ type: 'error', message: 'Please get your location first' });
+      return;
+    }
+
+    if (pendingVisitPayload || pendingVisitRecord || creatingPendingVisit) {
+      setAlert({
+        type: 'info',
+        message: 'एक फील्ड विजिट पहले से पेंडिंग है। कृपया पहले उसकी सेल्फी अपलोड करें।',
+      });
+      toast.info('Pending field visit selfie needs to be completed first.');
+      return;
+    }
+
+    const visitData: CreateFieldVisitRequest = {
+      loan_application_id: applicationId,
+      payment_details_id: paymentId,
+      visit_type_id: selectedVisitType,
+      latitude: roundCoordinate(locationData.latitude, 10),
+      longitude: roundCoordinate(locationData.longitude, 11),
+    };
+
+    setPendingVisitPayload(visitData);
+    setAllowCapture(true);
+    setShouldAutoStartCapture(true);
+    setLocationData(null);
   };
 
   // Open location in maps
@@ -427,7 +439,12 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
             {/* Get Location Button */}
             <Button 
               onClick={getCurrentLocation}
-              disabled={gettingLocation}
+              disabled={
+                gettingLocation ||
+                pendingVisitPayload !== null ||
+                pendingVisitRecord !== null ||
+                creatingPendingVisit
+              }
               className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-sm sm:text-base"
               size="default"
             >
@@ -447,47 +464,49 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
             </Button>
 
             {/* Record Visit Button */}
-            {locationData && (
+            {locationData && !pendingVisitPayload && !pendingVisitRecord && !creatingPendingVisit && (
               <Button 
                 onClick={recordFieldVisit}
-                disabled={loading}
+                disabled={
+                  pendingVisitPayload !== null ||
+                  pendingVisitRecord !== null ||
+                  creatingPendingVisit
+                }
                 className="w-full h-11 text-sm sm:text-base"
                 size="default"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span className="hidden sm:inline">Recording Visit...</span>
-                    <span className="sm:hidden">Recording...</span>
-                  </>
-                ) : (
-                  <>
                     <span className="hidden sm:inline">Record Field Visit</span>
                     <span className="sm:hidden">Record Visit</span>
-                  </>
-                )}
               </Button>
             )}
 
-            {/* Selfie Uploader shown ONLY immediately after a successful visit */}
-            {selfieDocCategoryId !== null && fieldVisits.length > 0 && allowCapture && (
+            {/* Selfie Uploader shown when a visit is pending completion */}
+            {selfieDocCategoryId !== null && allowCapture && (
               <div className="space-y-3 pt-2">
-                <Label className="text-sm font-medium">Upload Selfie for Latest Visit</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Upload Selfie to Complete Visit</Label>
+                  {creatingPendingVisit && (
+                    <span className="flex items-center gap-2 text-xs text-gray-500">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Saving visit...
+                    </span>
+                  )}
+                </div>
                 <SelfieUploader
                   applicantId={application?.applicant_id || ''}
                   loanApplicationId={applicationId!}
-                  fieldVisitLocationId={fieldVisits[0].id}
+                  fieldVisitLocationId={pendingVisitRecord?.id}
+                  getFieldVisitId={resolvePendingFieldVisitId}
                   selfieDocCategoryId={selfieDocCategoryId}
                   repaymentId={paymentId}
-                  autoStart={autoStartCaptureVisitId === fieldVisits[0].id && autoStartCaptureVisitId !== null}
+                  autoStart={shouldAutoStartCapture}
                   visitTypeLabel={VISIT_TYPES.find(v => v.id === selectedVisitType)?.type_name}
-                  onUploaded={(url) => {
+                  onUploaded={(url, visitId) => {
+                    if (!visitId) return;
                     setSelfieUrlsByVisit(prev => ({
                       ...prev,
-                      [fieldVisits[0].id]: [url, ...(prev[fieldVisits[0].id] || [])]
+                      [visitId]: [url, ...(prev[visitId] || [])]
                     }));
-                    // Immediately fetch the uploaded image and create a blob URL
-                    // so the UI updates in real-time without exposing signed URL
                     (async () => {
                       try {
                         const res = await fetch(url, { method: 'GET' });
@@ -499,16 +518,34 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                         const blobUrl = URL.createObjectURL(blob);
                         setSelfieBlobUrlsByVisit(prev => ({
                           ...prev,
-                          [fieldVisits[0].id]: [blobUrl, ...(prev[fieldVisits[0].id] || [])]
+                          [visitId]: [blobUrl, ...(prev[visitId] || [])]
                         }));
                       } catch (e) {
                         console.error('Error converting uploaded selfie to blob URL:', e);
                       }
                     })();
-                    // Reset auto-start immediately after upload - prevents auto-start on refresh
-                    setAutoStartCaptureVisitId(null);
-                    setAllowCapture(false); // hide camera until the next visit is created
-                    toast.success('Selfie uploaded');
+
+                    const visitRecord = pendingVisitRecord;
+                    if (visitRecord && visitRecord.id === visitId) {
+                      setFieldVisits(prev => {
+                        const without = prev.filter(v => v.id !== visitId);
+                        return [visitRecord, ...without];
+                      });
+                    }
+
+                    setPendingVisitRecord(null);
+                    setPendingVisitPayload(null);
+                    setAllowCapture(false);
+                    setShouldAutoStartCapture(false);
+                    setLocationData(null);
+
+                    setAlert({
+                      type: 'success',
+                      message: 'Field visit recorded successfully!',
+                    });
+                    toast.success('Field visit recorded successfully!');
+
+                    void loadFieldVisits();
                   }}
                 />
               </div>
