@@ -68,9 +68,29 @@ export const useRealtimeApplicationUpdates = ({
           break;
           
         case 'AMOUNT_COLLECTED_UPDATE':
-          updateApplication(applicationId, { 
+          // Update amount_collected with the new total
+          // Also deduct the submitted amount from current_overdue_amount in real-time
+          const updates: any = { 
             amount_collected: updateData.amount 
-          });
+          };
+          
+          // If a deducted amount is provided, update current_overdue_amount
+          if (updateData.deductedAmount !== undefined && updateData.deductedAmount !== null) {
+            // Find the current application to get its current_overdue_amount
+            const currentApp = applicationsRef.current.find(app => app.applicant_id === applicationId);
+            if (currentApp && currentApp.current_overdue_amount != null && !isNaN(currentApp.current_overdue_amount)) {
+              const newCurrentOverdue = Math.max(0, currentApp.current_overdue_amount - updateData.deductedAmount);
+              updates.current_overdue_amount = newCurrentOverdue;
+              console.log('🔄 RealtimeApplicationUpdates: Deducting amount from current_overdue_amount:', {
+                applicationId,
+                previousAmount: currentApp.current_overdue_amount,
+                deductedAmount: updateData.deductedAmount,
+                newAmount: newCurrentOverdue
+              });
+            }
+          }
+          
+          updateApplication(applicationId, updates);
           break;
           
         case 'COMMENT_ADDED':

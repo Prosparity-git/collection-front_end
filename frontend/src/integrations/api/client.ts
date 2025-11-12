@@ -134,6 +134,7 @@ interface ApiApplicationItem {
   current_dpd_bucket?: string | null; // Current DPD bucket
   total_overdue_amount?: number; // Total overdue amount from backend
   current_overdue_amount?: number; // Current overdue amount from backend
+  total_pos?: number; // Total POS from backend
   nach_status?: number; // NACH status (1 = success, 2+ = failure)
   reason?: string | null; // Reason for NACH failure
 }
@@ -215,6 +216,7 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     current_dpd_bucket: (apiItem as any).current_dpd_bucket ?? null,
     total_overdue_amount: (apiItem as any).total_overdue_amount ?? null,
     current_overdue_amount: (apiItem as any).current_overdue_amount ?? null,
+    total_pos: (apiItem as any).total_pos ?? null,
     nach_status: apiItem.nach_status !== undefined && apiItem.nach_status !== null 
       ? (typeof apiItem.nach_status === 'string' ? parseInt(apiItem.nach_status, 10) : apiItem.nach_status)
       : undefined,

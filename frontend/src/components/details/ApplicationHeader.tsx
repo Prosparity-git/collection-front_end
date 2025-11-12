@@ -32,6 +32,9 @@ const ApplicationHeader = ({ application }: ApplicationHeaderProps) => {
               <span className="font-medium">EMI Due:</span> {formatCurrency(application.emi_amount)}
             </div>
           )}
+          <div>
+            <span className="font-medium">Total POS:</span> {application.total_pos != null && !isNaN(application.total_pos) ? formatCurrency(application.total_pos) : 'N/A'}
+          </div>
         </div>
       </div>
     </div>

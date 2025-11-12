@@ -827,8 +827,9 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           amountCollected: ''
         }));
         
-        // Notify realtime updates with the new total
-        notifyAmountCollectedUpdate(application.applicant_id, totalAmount);
+        // Notify realtime updates with the new total and the deducted amount
+        // Pass the newAmount (deducted amount) so we can update current_overdue_amount
+        notifyAmountCollectedUpdate(application.applicant_id, totalAmount, newAmount);
       }
       
       // Update initial form data after successful submission to reflect new state

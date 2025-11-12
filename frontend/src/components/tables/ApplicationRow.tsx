@@ -130,7 +130,7 @@ const ApplicationRow = memo(({
                 )}
               </div>
               {Number(application.nach_status) !== 1 && application.reason && (
-                <span className="text-xs text-gray-700">Reason: {application.reason}</span>
+                <span className="text-xs text-gray-700">NACH Reason: {application.reason}</span>
               )}
             </>
           )}
@@ -138,11 +138,10 @@ const ApplicationRow = memo(({
       </TableCell>
 
       {/* Overdue */}
-      <TableCell className="py-4 align-top text-center w-[14%]">
+      <TableCell className="py-4 align-top text-center w-[18%]">
         <div className="flex flex-col gap-1 items-center">
           <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
-            <span className="text-gray-600">LMS</span>
-            <span className="text-gray-600">:</span>
+            <span className="text-gray-600">As of 7th:</span>
             <span className="font-semibold text-blue-600 inline-flex items-center gap-1">
               {application.total_overdue_amount != null && !isNaN(application.total_overdue_amount)
                 ? (
@@ -155,8 +154,7 @@ const ApplicationRow = memo(({
             </span>
           </div>
           <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
-            <span className="text-gray-600">Current</span>
-            <span className="text-gray-600">:</span>
+            <span className="text-gray-600">As of Today:</span>
             <span className="font-semibold text-blue-600 inline-flex items-center gap-1">
               {application.current_overdue_amount != null && !isNaN(application.current_overdue_amount)
                 ? (

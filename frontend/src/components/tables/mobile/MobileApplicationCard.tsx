@@ -164,7 +164,7 @@ const MobileApplicationCard = memo(({
             <p className="text-lg text-gray-600 mb-2 font-medium">Overdue Amount</p>
             <div className="flex flex-col gap-0.5">
               <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
-                <span className="text-gray-600">LMS</span>
+                <span className="text-gray-600">As of 7th</span>
                 <span className="text-gray-600">:</span>
                 <span className="text-base font-bold text-blue-800 inline-flex items-center gap-1">
                   {application.total_overdue_amount != null && !isNaN(application.total_overdue_amount)
@@ -178,7 +178,7 @@ const MobileApplicationCard = memo(({
                 </span>
               </div>
               <div className="text-sm grid grid-cols-[auto_auto_1fr] items-center gap-x-1">
-                <span className="text-gray-600">Current</span>
+                <span className="text-gray-600">As of Today</span>
                 <span className="text-gray-600">:</span>
                 <span className="text-base font-bold text-blue-800 inline-flex items-center gap-1">
                   {application.current_overdue_amount != null && !isNaN(application.current_overdue_amount)
@@ -274,12 +274,12 @@ const MobileApplicationCard = memo(({
               </div>
             )}
             
-            {/* Reason - only show if nach_status is not 1 */}
+            {/* NACH Reason - only show if nach_status is not 1 */}
             {application.nach_status !== undefined && application.nach_status !== null && Number(application.nach_status) !== 1 && application.reason && (
               <div className="flex items-start gap-2">
                 <div className="h-4 w-4 flex-shrink-0 mt-0.5"></div>
                 <div className="min-w-0">
-                  <div className="text-sm text-gray-600">Reason:</div>
+                  <div className="text-sm text-gray-600">NACH Reason:</div>
                   <div className="text-sm font-medium break-words">{application.reason}</div>
                 </div>
               </div>
