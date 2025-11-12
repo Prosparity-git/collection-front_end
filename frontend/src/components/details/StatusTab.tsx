@@ -953,6 +953,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       }
     }
     
+    // Check if target status (what user is submitting) is "overdue" (value "4")
+    const isTargetStatusOverdue = targetStatus === '4';
+    
+    // Validation: Cannot submit amount when status is "overdue"
+    // User must change status to "Partially Paid" or "Paid" to submit amount
+    if (isTargetStatusOverdue && hasAmountEntered) {
+      toast.error('Please change the status to "Partially Paid" or "Paid" to submit amount entered.');
+      return;
+    }
+    
     // Enforce rules per requirements
     // 1) Partially Paid without amount -> error, no submission
     if (targetStatus === '2' && !hasAmountEntered) {
