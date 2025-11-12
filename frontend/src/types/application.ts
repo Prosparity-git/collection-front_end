@@ -72,6 +72,11 @@ export interface Application {
   repossession_sale_date?: string; // Vehicle repossession sale date
   repossession_sale_amount?: number; // Vehicle repossession sale amount
   current_dpd_bucket?: string | null; // Current DPD bucket from backend
+  total_overdue_amount?: number; // Total overdue amount from backend
+  current_overdue_amount?: number; // Current overdue amount from backend
+  total_pos?: number; // Total POS from backend
+  nach_status?: number; // NACH status (1 = success, 2+ = failure)
+  reason?: string | null; // Reason for NACH failure
 }
 
 export interface AuditLog {

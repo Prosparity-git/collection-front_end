@@ -7,7 +7,7 @@ interface RealtimeUpdateContextType {
   notifyStatusUpdate: (applicationId: string, status: string) => void;
   notifyPreEmiStatusUpdate: (applicationId: string, preEmiStatus: string) => void;
   notifyPtpDateUpdate: (applicationId: string, ptpDate: string) => void;
-  notifyAmountCollectedUpdate: (applicationId: string, amount: number) => void;
+  notifyAmountCollectedUpdate: (applicationId: string, amount: number, deductedAmount?: number) => void;
   notifyCommentAdded: (applicationId: string, comment: any) => void;
   notifyContactStatusUpdate: (applicationId: string, contactType: string, status: string) => void;
 }
@@ -84,12 +84,13 @@ export const useRealtimeUpdateProvider = () => {
     });
   }, [notify]);
 
-  const notifyAmountCollectedUpdate = useCallback((applicationId: string, amount: number) => {
-    console.log('🔄 RealtimeUpdate: Notifying amount collected update:', { applicationId, amount });
+  const notifyAmountCollectedUpdate = useCallback((applicationId: string, amount: number, deductedAmount?: number) => {
+    console.log('🔄 RealtimeUpdate: Notifying amount collected update:', { applicationId, amount, deductedAmount });
     notify({
       type: 'AMOUNT_COLLECTED_UPDATE',
       applicationId,
       amount,
+      deductedAmount,
       timestamp: Date.now()
     });
   }, [notify]);

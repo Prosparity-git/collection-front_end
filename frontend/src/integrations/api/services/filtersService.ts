@@ -16,6 +16,18 @@ export interface FiltersOptionsResponse {
   demand_num: string[]; // Added to match backend API response
 }
 
+// Cascading filters API types
+export interface CascadeItem { id: number; name: string }
+export interface CascadingResponse {
+  branches: CascadeItem[];
+  team_leads: CascadeItem[];
+  rms: CascadeItem[];
+  source_team_leads: CascadeItem[];
+  source_rms: CascadeItem[];
+  dealers: CascadeItem[];
+  lenders: CascadeItem[];
+}
+
 // Filters Service
 export class FiltersService {
   // GET /api/v1/filters/options - Get all filter options
@@ -114,5 +126,32 @@ export class FiltersService {
     });
     
     return selectedOptions;
+  }
+
+  // GET /api/v1/filters/cascading - Get cascaded options for current selections
+  // Accepts comma-separated string IDs for multiple selections
+  static async getCascadingOptions(params: Partial<{
+    branch_id: string;
+    tl_id: string;
+    rm_id: string;
+    source_tl_id: string;
+    source_rm_id: string;
+    dealer_id: string;
+    lender_id: string;
+  }>): Promise<CascadingResponse> {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null) as [string, string][]
+    ).toString();
+
+    const response = await fetch(
+      `${API_BASE_URL}/filters/cascading${qs ? `?${qs}` : ''}`,
+      { headers: getAuthHeaders() }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch cascading options: ${response.status}`);
+    }
+
+    return await response.json();
   }
 }

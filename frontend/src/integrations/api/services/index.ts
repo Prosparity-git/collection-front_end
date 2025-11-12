@@ -2,6 +2,7 @@
 export * from './applicationService';
 export * from './commentsService';
 export * from './contactsService';
+export * from './documentService';
 export * from './exportService';
 export * from './fieldVisitService';
 export * from './filtersService';
@@ -11,6 +12,7 @@ export * from './recentActivityService';
 export * from './statusManagementService';
 export * from './summaryService';
 export * from './userService';
+export * from './otpService';
 
 // Export the main API client
 export { client } from '../client';

@@ -12,6 +12,7 @@ interface FilterHeaderProps {
   onEmiMonthChange?: (month: string) => void;
   emiMonthOptions?: string[];
   onClearAllFilters: () => void;
+  hasAnyFilters?: boolean;
 }
 
 const FilterHeader = ({
@@ -20,7 +21,8 @@ const FilterHeader = ({
   selectedEmiMonth,
   onEmiMonthChange,
   emiMonthOptions = [],
-  onClearAllFilters
+  onClearAllFilters,
+  hasAnyFilters = false
 }: FilterHeaderProps) => {
   return (
     <div className="p-4 border-b">
@@ -66,17 +68,16 @@ const FilterHeader = ({
           </div>
         </div>
 
-        {activeFilterCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClearAllFilters}
-            className="gap-2"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Clear All
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onClearAllFilters}
+          className="gap-2"
+          disabled={!hasAnyFilters}
+        >
+          <RotateCcw className="h-4 w-4" />
+          Clear All
+        </Button>
       </div>
     </div>
   );

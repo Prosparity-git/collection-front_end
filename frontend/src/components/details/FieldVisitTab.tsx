@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Application } from "@/types/application";
 import { FieldVisitService, FieldVisitLocation, CreateFieldVisitRequest } from "@/integrations/api/services/fieldVisitService";
+import { DocumentService } from "@/integrations/api/services";
+import SelfieUploader from "./SelfieUploader";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -26,8 +28,8 @@ interface LocationData {
 
 // Hardcoded visit types based on the data structure
 const VISIT_TYPES = [
-  { id: 1, type_name: "Customer Visit - House", description: "Visit to customer location" },
-  { id: 2, type_name: "Customer Visit - Outside Location", description: "Follow-up visit for payment collection" }
+  { id: 1, type_name: "Customer Visit - House", description: "Visit to customer's house" },
+  { id: 2, type_name: "Customer Visit - Outside Location", description: "Visit at outside location" }
 ];
 
 // Utility function to round coordinates to meet backend validation requirements
@@ -48,6 +50,16 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [selectedVisitForMap, setSelectedVisitForMap] = useState<FieldVisitLocation | null>(null);
   const [showMapDialog, setShowMapDialog] = useState(false);
+  const [selfieUrlsByVisit, setSelfieUrlsByVisit] = useState<Record<number, string[]>>({});
+  const [selfieBlobUrlsByVisit, setSelfieBlobUrlsByVisit] = useState<Record<number, string[]>>({});
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [allowCapture, setAllowCapture] = useState<boolean>(false);
+  const [selfieDocCategoryId, setSelfieDocCategoryId] = useState<number | null>(null);
+  const [pendingVisitPayload, setPendingVisitPayload] = useState<CreateFieldVisitRequest | null>(null);
+  const [pendingVisitRecord, setPendingVisitRecord] = useState<FieldVisitLocation | null>(null);
+  const [shouldAutoStartCapture, setShouldAutoStartCapture] = useState<boolean>(false);
+  const [creatingPendingVisit, setCreatingPendingVisit] = useState<boolean>(false);
 
   // Load field visits for this application
   const loadFieldVisits = useCallback(async () => {
@@ -68,6 +80,11 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
         payment_details_id: paymentId
       });
       setFieldVisits(visits);
+      setPendingVisitRecord(prev => {
+        if (!prev) return prev;
+        const match = visits.find(v => v.id === prev.id);
+        return match ?? prev;
+      });
       console.log('FieldVisitTab: Loaded visits', visits);
     } catch (error) {
       console.error('Failed to load field visits:', error);
@@ -80,6 +97,88 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
   useEffect(() => {
     loadFieldVisits();
   }, [loadFieldVisits]);
+
+  // Map signed URLs to Blob URLs for safe rendering without exposing credentials
+  useEffect(() => {
+    let cleanupUrls: string[] = [];
+
+    const mapSignedUrlsToBlobs = async (docs: Array<{ url: string; field_visit_location_id: number }>) => {
+      const byVisit: Record<number, string[]> = {};
+      const blobByVisit: Record<number, string[]> = {};
+      const cleanup: string[] = [];
+
+      for (const d of docs) {
+        const visitId = d.field_visit_location_id;
+        if (!visitId) continue;
+
+        if (!byVisit[visitId]) byVisit[visitId] = [];
+        byVisit[visitId].push(d.url);
+
+        try {
+          const res = await fetch(d.url, { method: 'GET' });
+          if (!res.ok) {
+            console.error('Failed to fetch signed URL for visit', visitId, res.status);
+            continue;
+          }
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          if (!blobByVisit[visitId]) blobByVisit[visitId] = [];
+          blobByVisit[visitId].push(blobUrl);
+          cleanup.push(blobUrl);
+        } catch (e) {
+          console.error('Error fetching image blob:', e);
+        }
+      }
+
+      return { byVisit, blobByVisit, cleanup };
+    };
+
+    const run = async () => {
+      if (!applicationId) return;
+      try {
+        const docs = await DocumentService.listByLoan(applicationId);
+        const { byVisit, blobByVisit, cleanup } = await mapSignedUrlsToBlobs(
+          docs.map(d => ({
+            url: d.url,
+            field_visit_location_id: (d as any).field_visit_location_id as number
+          }))
+        );
+
+        // Revoke previous blob URLs before setting new ones
+        setSelfieBlobUrlsByVisit(prev => {
+          Object.values(prev).forEach(urls => urls.forEach(URL.revokeObjectURL));
+          return blobByVisit;
+        });
+        setSelfieUrlsByVisit(byVisit);
+        cleanupUrls = cleanup;
+      } catch (err) {
+        console.error('Failed to load documents by loan:', err);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cleanupUrls.forEach(URL.revokeObjectURL);
+      setSelfieBlobUrlsByVisit(prev => {
+        Object.values(prev).forEach(urls => urls.forEach(URL.revokeObjectURL));
+        return {};
+      });
+    };
+  }, [applicationId, fieldVisits.length]);
+
+  // TODO: Fetch selfieDocCategoryId from backend or constants
+  // For now, using a placeholder - you should replace this with actual fetching logic
+  useEffect(() => {
+    // Example: Fetch doc category ID for SELFIE
+    // This should be replaced with actual API call or constant
+    const fetchSelfieDocCategoryId = async () => {
+      // TODO: Replace with actual API call to get doc category ID for "SELFIE"
+      // For now, using placeholder value
+      setSelfieDocCategoryId(4); // Replace with actual ID
+    };
+    void fetchSelfieDocCategoryId();
+  }, []);
 
   // Get user's current location
   const getCurrentLocation = async () => {
@@ -136,64 +235,34 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
     }
   };
 
-  // Record field visit
-  const recordFieldVisit = async () => {
-    if (!locationData || !applicationId || !paymentId) {
-      setAlert({ type: 'error', message: 'Please get your location first' });
-      return;
+  const resolvePendingFieldVisitId = useCallback(async (): Promise<number> => {
+    if (pendingVisitRecord) {
+      return pendingVisitRecord.id;
+    }
+
+    if (!pendingVisitPayload) {
+      throw new Error('No pending field visit available. Please record location again.');
     }
 
     try {
-      setLoading(true);
-      setAlert(null);
-
-      const visitData: CreateFieldVisitRequest = {
-        loan_application_id: applicationId,
-        payment_details_id: paymentId,
-        visit_type_id: selectedVisitType,
-        latitude: roundCoordinate(locationData.latitude, 10), // Max 10 digits for latitude
-        longitude: roundCoordinate(locationData.longitude, 11) // Max 11 digits for longitude
-      };
-
-      const newVisit = await FieldVisitService.createFieldVisit(visitData);
-      
-      // Add to local state
-      setFieldVisits(prev => [newVisit, ...prev]);
-      
-      setAlert({ 
-        type: 'success', 
-        message: `Field visit recorded successfully! Visit ID: ${newVisit.id}` 
-      });
-
-      toast.success('Field visit recorded successfully!');
-      
-      // Clear location data after successful recording
-      setLocationData(null);
-
+      setCreatingPendingVisit(true);
+      const newVisit = await FieldVisitService.createFieldVisit(pendingVisitPayload);
+      setPendingVisitRecord(newVisit);
+      setPendingVisitPayload(null);
+      return newVisit.id;
     } catch (error) {
-      console.error('Failed to record field visit:', error);
+      console.error('Failed to create field visit before selfie upload:', error);
       
-      // Parse error message to show user-friendly version
-      let errorMessage = 'Failed to record field visit';
+      let errorMessage = 'Failed to create field visit';
       if (error instanceof Error) {
         const errorText = error.message;
-        
-        // Extract distance from error message (Hindi text)
         const distanceMatch = errorText.match(/दूरी:\s*([\d,]+)\s*मीटर/);
-        const statusMatch = errorText.match(/Error creating field visit:\s*\d+:/);
         
         if (distanceMatch) {
           const distance = parseInt(distanceMatch[1].replace(/,/g, ''));
-          
-          // Show distance in meters if under 1000m, in kilometers if above 1000m
-          let distanceText;
-          if (distance < 1000) {
-            distanceText = `${distance} मीटर`;
-          } else {
-            const distanceKm = (distance / 1000).toFixed(1);
-            distanceText = `${distanceKm} किमी`;
-          }
-          
+          const distanceText = distance < 1000
+            ? `${distance} मीटर`
+            : `${(distance / 1000).toFixed(1)} किमी`;
           errorMessage = `ग्राहक के घर से बहुत दूर हैं (${distanceText})। कृपया 100 मीटर के दायरे में जाएं।`;
         } else {
           errorMessage = errorText;
@@ -202,9 +271,45 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
       
       setAlert({ type: 'error', message: errorMessage });
       toast.error(errorMessage);
+      throw error;
     } finally {
-      setLoading(false);
+      setCreatingPendingVisit(false);
     }
+  }, [pendingVisitPayload, pendingVisitRecord]);
+
+  // Record field visit
+  const recordFieldVisit = () => {
+    if (!applicationId || !paymentId) {
+      setAlert({ type: 'error', message: 'Missing required identifiers to record visit.' });
+      return;
+    }
+
+    if (!locationData) {
+      setAlert({ type: 'error', message: 'Please get your location first' });
+      return;
+    }
+
+    if (pendingVisitPayload || pendingVisitRecord || creatingPendingVisit) {
+      setAlert({
+        type: 'info',
+        message: 'एक फील्ड विजिट पहले से पेंडिंग है। कृपया पहले उसकी सेल्फी अपलोड करें।',
+      });
+      toast.info('Pending field visit selfie needs to be completed first.');
+      return;
+    }
+
+    const visitData: CreateFieldVisitRequest = {
+      loan_application_id: applicationId,
+      payment_details_id: paymentId,
+      visit_type_id: selectedVisitType,
+      latitude: roundCoordinate(locationData.latitude, 10),
+      longitude: roundCoordinate(locationData.longitude, 11),
+    };
+
+    setPendingVisitPayload(visitData);
+    setAllowCapture(true);
+    setShouldAutoStartCapture(true);
+    setLocationData(null);
   };
 
   // Open location in maps
@@ -334,7 +439,12 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
             {/* Get Location Button */}
             <Button 
               onClick={getCurrentLocation}
-              disabled={gettingLocation}
+              disabled={
+                gettingLocation ||
+                pendingVisitPayload !== null ||
+                pendingVisitRecord !== null ||
+                creatingPendingVisit
+              }
               className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-sm sm:text-base"
               size="default"
             >
@@ -354,26 +464,91 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
             </Button>
 
             {/* Record Visit Button */}
-            {locationData && (
+            {locationData && !pendingVisitPayload && !pendingVisitRecord && !creatingPendingVisit && (
               <Button 
                 onClick={recordFieldVisit}
-                disabled={loading}
+                disabled={
+                  pendingVisitPayload !== null ||
+                  pendingVisitRecord !== null ||
+                  creatingPendingVisit
+                }
                 className="w-full h-11 text-sm sm:text-base"
                 size="default"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span className="hidden sm:inline">Recording Visit...</span>
-                    <span className="sm:hidden">Recording...</span>
-                  </>
-                ) : (
-                  <>
                     <span className="hidden sm:inline">Record Field Visit</span>
                     <span className="sm:hidden">Record Visit</span>
-                  </>
-                )}
               </Button>
+            )}
+
+            {/* Selfie Uploader shown when a visit is pending completion */}
+            {selfieDocCategoryId !== null && allowCapture && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Upload Selfie to Complete Visit</Label>
+                  {creatingPendingVisit && (
+                    <span className="flex items-center gap-2 text-xs text-gray-500">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Saving visit...
+                    </span>
+                  )}
+                </div>
+                <SelfieUploader
+                  applicantId={application?.applicant_id || ''}
+                  loanApplicationId={applicationId!}
+                  fieldVisitLocationId={pendingVisitRecord?.id}
+                  getFieldVisitId={resolvePendingFieldVisitId}
+                  selfieDocCategoryId={selfieDocCategoryId}
+                  repaymentId={paymentId}
+                  autoStart={shouldAutoStartCapture}
+                  visitTypeLabel={VISIT_TYPES.find(v => v.id === selectedVisitType)?.type_name}
+                  onUploaded={(url, visitId) => {
+                    if (!visitId) return;
+                    setSelfieUrlsByVisit(prev => ({
+                      ...prev,
+                      [visitId]: [url, ...(prev[visitId] || [])]
+                    }));
+                    (async () => {
+                      try {
+                        const res = await fetch(url, { method: 'GET' });
+                        if (!res.ok) {
+                          console.error('Failed to fetch uploaded selfie for blob conversion', res.status);
+                          return;
+                        }
+                        const blob = await res.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        setSelfieBlobUrlsByVisit(prev => ({
+                          ...prev,
+                          [visitId]: [blobUrl, ...(prev[visitId] || [])]
+                        }));
+                      } catch (e) {
+                        console.error('Error converting uploaded selfie to blob URL:', e);
+                      }
+                    })();
+
+                    const visitRecord = pendingVisitRecord;
+                    if (visitRecord && visitRecord.id === visitId) {
+                      setFieldVisits(prev => {
+                        const without = prev.filter(v => v.id !== visitId);
+                        return [visitRecord, ...without];
+                      });
+                    }
+
+                    setPendingVisitRecord(null);
+                    setPendingVisitPayload(null);
+                    setAllowCapture(false);
+                    setShouldAutoStartCapture(false);
+                    setLocationData(null);
+
+                    setAlert({
+                      type: 'success',
+                      message: 'Field visit recorded successfully!',
+                    });
+                    toast.success('Field visit recorded successfully!');
+
+                    void loadFieldVisits();
+                  }}
+                />
+              </div>
             )}
           </div>
         </CardContent>
@@ -444,6 +619,40 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                         <span className="text-xs">External</span>
                       </Button>
                     </div>
+
+                    {/* Selfies for this visit - clickable to open */}
+                    {selfieBlobUrlsByVisit[visit.id] && selfieBlobUrlsByVisit[visit.id].length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2 pt-1">
+                        {selfieBlobUrlsByVisit[visit.id].map((blobUrl, idx) => (
+                          <div key={idx} className="relative w-full h-20 rounded overflow-hidden bg-gray-100 border">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={blobUrl}
+                              alt={`selfie-${idx + 1}`}
+                              className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                setSelectedImageUrl(blobUrl);
+                                setShowImageDialog(true);
+                              }}
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `
+                                    <div class="w-full h-full flex items-center justify-center bg-red-50 border border-red-200 rounded">
+                                      <span class="text-xs text-red-600 text-center px-1">Failed to load</span>
+                                    </div>
+                                  `;
+                                }
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 italic pt-1">No selfies for this visit</div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -505,6 +714,16 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
                 />
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={selectedImageUrl} alt="Selfie" className="max-w-full max-h-[70vh] object-contain" />
           )}
         </DialogContent>
       </Dialog>

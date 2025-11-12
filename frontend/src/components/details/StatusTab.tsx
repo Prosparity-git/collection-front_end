@@ -20,6 +20,8 @@ import { StatusManagementService } from '@/integrations/api/services/statusManag
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { getStatusLabel } from '@/utils/statusMapping';
 import RecentActivityCard from "./RecentActivityCard";
+import OTPVerificationModal from '@/components/OTPVerificationModal';
+import PaymentSuccessModal from '@/components/PaymentSuccessModal';
 import { useLoanRecentActivity } from '@/hooks/useRecentActivity';
 
 interface StatusTabProps {
@@ -37,7 +39,7 @@ interface StatusTabProps {
 // New repayment status options (collection status)
 const REPAYMENT_STATUS_OPTIONS = [
   { value: "1", label: "Future", disabled: true },
-  { value: "4", label: "Overdue" },
+  { value: "4", label: "Overdue", disabled: true },
   { value: "2", label: "Partially Paid" },
   { value: "5", label: "Foreclose" },
   { value: "6", label: "Paid" }
@@ -96,7 +98,40 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [paymentSuccessData, setPaymentSuccessData] = useState<{
+    amount?: number;
+    status?: string;
+  }>({});
   
+  // Track initial form values to detect changes
+  const [initialFormData, setInitialFormData] = useState({
+    repaymentStatus: '',
+    ptpDate: '',
+    amountCollected: ''
+  });
+  
+  // Check if any changes have been made to the form
+  const hasChanges = useMemo(() => {
+    const statusChanged = formData.repaymentStatus !== initialFormData.repaymentStatus;
+    
+    // For PTP date, treat 'clear' as a change if initial value is not empty
+    const ptpDateChanged = formData.ptpDate === 'clear' 
+      ? initialFormData.ptpDate !== '' 
+      : formData.ptpDate !== initialFormData.ptpDate;
+    
+    const amountChanged = formData.amountCollected !== initialFormData.amountCollected;
+    
+    return statusChanged || ptpDateChanged || amountChanged;
+  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, initialFormData]);
+  
+  // Get the actual status label for display
+  const statusLabel = useMemo(() => {
+    const status = application.status || currentStatus;
+    return getStatusLabel(status);
+  }, [application.status, currentStatus]);
+
   // Check if status should be locked based on API response
   const isLocked = useMemo(() => {
     const status = application.status || currentStatus;
@@ -135,6 +170,11 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       console.log('🔄 StatusTab: Mapped status to dropdown value:', { currentStatus, mappedValue });
       
       setFormData(prev => ({
+        ...prev,
+        repaymentStatus: mappedValue
+      }));
+      // Also update initial form data when currentStatus changes from API
+      setInitialFormData(prev => ({
         ...prev,
         repaymentStatus: mappedValue
       }));
@@ -303,6 +343,18 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         ...prev,
         ...updates
       }));
+      // Also set initial form data to track changes
+      setInitialFormData(prev => ({
+        ...prev,
+        ...updates
+      }));
+    } else {
+      // Even if no updates, set initial form data to current empty state
+      setInitialFormData({
+        repaymentStatus: '',
+        ptpDate: '',
+        amountCollected: ''
+      });
     }
     
   }, []); // Empty dependency array - only run on mount
@@ -389,6 +441,18 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         ...prev,
         ...updates
       }));
+      // Also update initial form data to track changes when application changes
+      setInitialFormData(prev => ({
+        ...prev,
+        ...updates
+      }));
+    } else {
+      // Even if no updates, reset initial form data to current empty state
+      setInitialFormData({
+        repaymentStatus: '',
+        ptpDate: '',
+        amountCollected: ''
+      });
     }
   }, [application.status, application.ptp_date, application.amount_collected, selectedMonth]);
 
@@ -605,8 +669,8 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     });
   }, [formData, user, selectedMonth, application?.applicant_id]);
 
-  // Handle form submission using the new StatusManagementService
-  const handleSubmit = async () => {
+  // Actual submit logic extracted for OTP gating
+  const performStatusUpdate = async () => {
     console.log('🔍 Submit validation check:', {
       user: !!user,
       selectedMonth,
@@ -757,9 +821,25 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           amountCollected: ''
         }));
         
-        // Notify realtime updates with the new total
-        notifyAmountCollectedUpdate(application.applicant_id, totalAmount);
+        // Also update initial form data to reflect the cleared state
+        setInitialFormData(prev => ({
+          ...prev,
+          amountCollected: ''
+        }));
+        
+        // Notify realtime updates with the new total and the deducted amount
+        // Pass the newAmount (deducted amount) so we can update current_overdue_amount
+        notifyAmountCollectedUpdate(application.applicant_id, totalAmount, newAmount);
       }
+      
+      // Update initial form data after successful submission to reflect new state
+      // This ensures the submit button is disabled until user makes new changes
+      setInitialFormData(prev => ({
+        ...prev,
+        repaymentStatus: formData.repaymentStatus || prev.repaymentStatus,
+        ptpDate: formData.ptpDate === 'clear' ? '' : (formData.ptpDate || prev.ptpDate),
+        amountCollected: hasAmountCollected ? '' : prev.amountCollected
+      }));
 
       // Add audit logs for changed fields
       
@@ -808,7 +888,20 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
         refetchStatusCounts();
       }
 
-      toast.success('Status updated successfully!');
+      // Show payment success modal if amount was collected for Paid or Partially Paid status
+      const submittedStatus = formData.repaymentStatus || mapBackendStatusToDropdownValue(currentStatus);
+      const isPaidOrPartiallyPaid = submittedStatus === '2' || submittedStatus === '6';
+      
+      if (hasAmountCollected && isPaidOrPartiallyPaid) {
+        const amountValue = parseFloat(formData.amountCollected);
+        setPaymentSuccessData({
+          amount: amountValue,
+          status: submittedStatus
+        });
+        setShowPaymentSuccessModal(true);
+      } else {
+        toast.success('Status updated successfully!');
+      }
       
     } catch (error) {
       console.error('❌ Failed to submit status update:', error);
@@ -837,6 +930,62 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Gate submission for Paid (6) or Partially Paid (2) behind OTP
+  const handleSubmit = async () => {
+    // Get the target status (what user selected, or current if unchanged)
+    const targetStatus = formData.repaymentStatus || mapBackendStatusToDropdownValue(currentStatus);
+    
+    // Check if target status is '2' (Partially Paid) or '6' (Paid)
+    const isTargetStatus2Or6 = targetStatus === '2' || targetStatus === '6';
+    
+    // Check if user entered an amount > 0
+    let hasAmountEntered = formData.amountCollected !== undefined && 
+                            formData.amountCollected !== '' && 
+                            formData.amountCollected !== '0';
+    
+    let amountValue = 0;
+    if (hasAmountEntered) {
+      amountValue = parseFloat(formData.amountCollected);
+      if (isNaN(amountValue) || !isFinite(amountValue) || amountValue <= 0) {
+        hasAmountEntered = false;
+      }
+    }
+    
+    // Enforce rules per requirements
+    // 1) Partially Paid without amount -> error, no submission
+    if (targetStatus === '2' && !hasAmountEntered) {
+      toast.error('Please enter amount for Partially Paid.');
+      return;
+    }
+
+    // 2) Paid: validate total >= EMI first (even if no amount entered)
+    if (targetStatus === '6') {
+      const existingAmount = Number(application.amount_collected) || 0;
+      const totalAmount = existingAmount + (hasAmountEntered ? amountValue : 0);
+      const emiAmount = application.emi_amount || 0;
+      if (totalAmount < emiAmount) {
+        toast.error(`Amount collected must be >= EMI (₹${emiAmount.toLocaleString('en-IN')}) for Paid`);
+        return;
+      }
+      // Paid with amount -> OTP required; Paid without amount -> no OTP
+      if (hasAmountEntered) {
+        setShowOtpModal(true);
+        return;
+      }
+      await performStatusUpdate();
+      return;
+    }
+
+    // 3) Partially Paid with amount -> OTP required
+    if (targetStatus === '2' && hasAmountEntered) {
+      setShowOtpModal(true);
+      return;
+    }
+
+    // 4) Other statuses or only PTP changes -> no OTP, direct submission
+    await performStatusUpdate();
   };
 
   // Optimized date formatting function
@@ -886,7 +1035,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                 <span className="font-medium">Status Locked</span>
               </div>
               <p className="text-sm text-amber-700 mt-1">
-                This application has a "Paid" status. All fields are locked and cannot be modified.
+                This application has a "{statusLabel}" status. All fields are locked and cannot be modified.
               </p>
             </div>
           )}
@@ -1016,7 +1165,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
             <div className="pt-4">
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || isLocked}
+                disabled={isSubmitting || isLocked || !hasChanges}
                 className="w-full"
                 size="lg"
               >
@@ -1106,6 +1255,27 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
           maxItems={50}
         />
       )}
+
+    <OTPVerificationModal
+      open={showOtpModal}
+      onClose={() => setShowOtpModal(false)}
+      onSuccess={async () => {
+        setShowOtpModal(false);
+        await performStatusUpdate();
+      }}
+      application={application}
+      amount={parseFloat(formData.amountCollected || '0') || 0}
+    />
+    
+    <PaymentSuccessModal
+      open={showPaymentSuccessModal}
+      onClose={() => {
+        setShowPaymentSuccessModal(false);
+        setPaymentSuccessData({});
+      }}
+      amount={paymentSuccessData.amount}
+      status={paymentSuccessData.status}
+    />
     </div>
   );
 };

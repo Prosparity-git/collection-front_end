@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import CustomMultiSelectFilter from "@/components/CustomMultiSelectFilter";
 import PtpDateFilter from "@/components/filters/PtpDateFilter";
-import { useEffect } from "react";
+import { useState } from "react";
 
 interface FilterContentProps {
   filters: any;
@@ -9,23 +9,15 @@ interface FilterContentProps {
   onFilterChange: (key: string, values: string[]) => void;
   onClose?: () => void;
   onCancel?: () => void;
+  onDropdownOpenChange?: (key: string, open: boolean) => void;
 }
 
-const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onCancel }: FilterContentProps) => {
-  // Debug logging for filter options
-  useEffect(() => {
-    console.log('🔍 FilterContent received availableOptions:', availableOptions);
-    console.log('🔍 Repayments options:', availableOptions.repayments);
-    console.log('🔍 PTP Date options:', availableOptions.ptpDateOptions);
-    console.log('🔍 Last Month Bounce options:', availableOptions.lastMonthBounce);
-    console.log('🔍 Repayments options length:', availableOptions.repayments?.length);
-    console.log('🔍 PTP Date options length:', availableOptions.ptpDateOptions?.length);
-    console.log('🔍 Last Month Bounce options length:', availableOptions.lastMonthBounce?.length);
-    
-    // Log all available options for debugging
-    console.log('🔍 All available options keys:', Object.keys(availableOptions || {}));
-    console.log('🔍 Full availableOptions object:', availableOptions);
-  }, [availableOptions]);
+const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onCancel, onDropdownOpenChange }: FilterContentProps) => {
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  const setOpen = (key: string) => (v: boolean) => {
+    setOpenMap(prev => ({ ...prev, [key]: v }));
+    onDropdownOpenChange?.(key, v);
+  };
 
   return (
     <div className="p-4 bg-gray-50 border-b">
@@ -35,11 +27,10 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           label="Branch"
           options={availableOptions.branches || []}
           selected={filters.branch || []}
-          onSelectionChange={(values) => {
-            console.log('🔧 Branch filter onSelectionChange called with:', values);
-            onFilterChange('branch', values);
-          }}
+          onSelectionChange={(values) => onFilterChange('branch', values)}
           placeholder="Select branches"
+          onOpenChange={setOpen('branch')}
+          deferChangeUntilClose
         />
 
         {/* Current Team Lead Filter */}
@@ -49,6 +40,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.teamLead || []}
           onSelectionChange={(values) => onFilterChange('teamLead', values)}
           placeholder="Select team leads"
+          onOpenChange={setOpen('teamLead')}
+          deferChangeUntilClose
         />
 
         {/* Current RM Filter */}
@@ -58,6 +51,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.rm || []}
           onSelectionChange={(values) => onFilterChange('rm', values)}
           placeholder="Select RMs"
+          onOpenChange={setOpen('rm')}
+          deferChangeUntilClose
         />
 
         {/* Source Team Lead Filter */}
@@ -67,6 +62,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.sourceTeamLead || []}
           onSelectionChange={(values) => onFilterChange('sourceTeamLead', values)}
           placeholder="Select source team leads"
+          onOpenChange={setOpen('sourceTeamLead')}
+          deferChangeUntilClose
         />
 
         {/* Source RM Filter */}
@@ -76,6 +73,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.sourceRm || []}
           onSelectionChange={(values) => onFilterChange('sourceRm', values)}
           placeholder="Select source RMs"
+          onOpenChange={setOpen('sourceRm')}
+          deferChangeUntilClose
         />
 
         {/* Dealer Filter */}
@@ -85,6 +84,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.dealer || []}
           onSelectionChange={(values) => onFilterChange('dealer', values)}
           placeholder="Select dealers"
+          onOpenChange={setOpen('dealer')}
+          deferChangeUntilClose
         />
 
         {/* DPD Bucket Filter */}
@@ -94,6 +95,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.dpdBucket || []}
           onSelectionChange={(values) => onFilterChange('dpdBucket', values)}
           placeholder="Select DPD buckets"
+          onOpenChange={setOpen('dpdBucket')}
+          deferChangeUntilClose
         />
 
         {/* Lender Filter */}
@@ -103,6 +106,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.lender || []}
           onSelectionChange={(values) => onFilterChange('lender', values)}
           placeholder="Select lenders"
+          onOpenChange={setOpen('lender')}
+          deferChangeUntilClose
         />
 
         {/* Status Filter */}
@@ -112,6 +117,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.status || []}
           onSelectionChange={(values) => onFilterChange('status', values)}
           placeholder="Select status"
+          onOpenChange={setOpen('status')}
+          deferChangeUntilClose
         />
 
         {/* Repayment Filter */}
@@ -121,6 +128,8 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
           selected={filters.repayment || []}
           onSelectionChange={(values) => onFilterChange('repayment', values)}
           placeholder="Select repayment"
+          onOpenChange={setOpen('repayment')}
+          deferChangeUntilClose
         />
 
         {/* Last Month Bounce Filter - Hidden as requested */}

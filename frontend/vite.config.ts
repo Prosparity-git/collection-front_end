@@ -7,7 +7,7 @@ import path from "path";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 5173,  // Changed from 8080 to 5173 to match backend CORS
+    port: 3000,  
   },
   plugins: [
     react(),

@@ -26,6 +26,9 @@ const ApplicationDetails = memo(({ application }: ApplicationDetailsProps) => {
         <span className="font-medium"> EMI Due:</span> {formatCurrency(application.emi_amount)}
       </div>
       <div className="text-sm text-gray-600">
+        <span className="font-medium">Total POS:</span> {application.total_pos != null && !isNaN(application.total_pos) ? formatCurrency(application.total_pos) : 'N/A'}
+      </div>
+      <div className="text-sm text-gray-600">
         <span className="font-medium">Branch:</span> {application.branch_name}
       </div>
       <div className="text-sm text-gray-600">
