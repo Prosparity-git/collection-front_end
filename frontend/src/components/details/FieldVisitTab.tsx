@@ -436,32 +436,34 @@ const FieldVisitTab = ({ application, paymentId, applicationId }: FieldVisitTabP
               </div>
             )}
 
-            {/* Get Location Button */}
-            <Button 
-              onClick={getCurrentLocation}
-              disabled={
-                gettingLocation ||
-                pendingVisitPayload !== null ||
-                pendingVisitRecord !== null ||
-                creatingPendingVisit
-              }
-              className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-sm sm:text-base"
-              size="default"
-            >
-              {gettingLocation ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">Getting Location...</span>
-                  <span className="sm:hidden">Getting...</span>
-                </>
-              ) : (
-                <>
-                  <Navigation className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Get My Location</span>
-                  <span className="sm:hidden">Get Location</span>
-                </>
-              )}
-            </Button>
+            {/* Get Location Button - Only show when location hasn't been captured */}
+            {!locationData && (
+              <Button 
+                onClick={getCurrentLocation}
+                disabled={
+                  gettingLocation ||
+                  pendingVisitPayload !== null ||
+                  pendingVisitRecord !== null ||
+                  creatingPendingVisit
+                }
+                className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-sm sm:text-base"
+                size="default"
+              >
+                {gettingLocation ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">Getting Location...</span>
+                    <span className="sm:hidden">Getting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Get My Location</span>
+                    <span className="sm:hidden">Get Location</span>
+                  </>
+                )}
+              </Button>
+            )}
 
             {/* Record Visit Button */}
             {locationData && !pendingVisitPayload && !pendingVisitRecord && !creatingPendingVisit && (
