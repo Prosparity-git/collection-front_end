@@ -133,13 +133,7 @@ const DocsTab = ({ application }: DocsTabProps) => {
       {previewDocument && (
         <Card className="mb-4 border-2 border-blue-200">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <CardTitle className="text-base font-semibold text-gray-900">
-                  {previewDocument.file_name || "Untitled Document"}
-                </CardTitle>
-              </div>
+            <div className="flex items-center justify-end">
               <Button
                 variant="ghost"
                 size="sm"
@@ -155,7 +149,7 @@ const DocsTab = ({ application }: DocsTabProps) => {
               <iframe
                 src={previewDocument.url}
                 className="w-full h-full border-0"
-                title={previewDocument.file_name || "Document Preview"}
+                title="Document Preview"
                 style={{ minHeight: '600px' }}
               />
             </div>
@@ -178,63 +172,26 @@ const DocsTab = ({ application }: DocsTabProps) => {
       <div className="grid gap-4">
         {documents.map((doc) => (
           <Card key={doc.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <FileText className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base font-semibold text-gray-900 truncate">
-                      {doc.file_name || "Untitled Document"}
-                    </CardTitle>
-                    {doc.notes && (
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{doc.notes}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                  {doc.mime_type && (
-                    <span className="flex items-center gap-1">
-                      <span className="font-medium">Type:</span>
-                      <span>{doc.mime_type}</span>
-                    </span>
-                  )}
-                  {doc.size_bytes && (
-                    <span className="flex items-center gap-1">
-                      <span className="font-medium">Size:</span>
-                      <span>{formatFileSize(doc.size_bytes)}</span>
-                    </span>
-                  )}
-                  {doc.created_at && (
-                    <span className="flex items-center gap-1">
-                      <span className="font-medium">Created:</span>
-                      <span>{formatDate(doc.created_at)}</span>
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                    onClick={() => setPreviewDocumentId(doc.id)}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Preview
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => window.open(doc.url, "_blank")}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Open in New Tab
-                  </Button>
-                </div>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setPreviewDocumentId(doc.id)}
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={() => window.open(doc.url, "_blank")}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in New Tab
+                </Button>
               </div>
             </CardContent>
           </Card>
