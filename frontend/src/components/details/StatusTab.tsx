@@ -125,6 +125,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
     
     return statusChanged || ptpDateChanged || amountChanged;
   }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, initialFormData]);
+
+  // Check if ONLY PTP date has changed (for allowing submission even when locked)
+  const isPtpOnlyChange = useMemo(() => {
+    const statusChanged = formData.repaymentStatus !== initialFormData.repaymentStatus;
+    const ptpDateChanged = formData.ptpDate === 'clear' 
+      ? initialFormData.ptpDate !== '' 
+      : formData.ptpDate !== initialFormData.ptpDate;
+    const amountChanged = formData.amountCollected !== initialFormData.amountCollected;
+    return ptpDateChanged && !statusChanged && !amountChanged;
+  }, [formData.repaymentStatus, formData.ptpDate, formData.amountCollected, initialFormData]);
   
   // Get the actual status label for display
   const statusLabel = useMemo(() => {
@@ -711,8 +721,16 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
       }
     }
 
-    // Prevent submission if status is locked
-    if (isLocked) {
+    // Check if ONLY PTP date has changed (no status or amount changes)
+    const statusChanged = formData.repaymentStatus !== initialFormData.repaymentStatus;
+    const ptpDateChanged = formData.ptpDate === 'clear' 
+      ? initialFormData.ptpDate !== '' 
+      : formData.ptpDate !== initialFormData.ptpDate;
+    const amountChanged = formData.amountCollected !== initialFormData.amountCollected;
+    const isPtpOnlyChange = ptpDateChanged && !statusChanged && !amountChanged;
+
+    // Prevent submission if status is locked, but allow PTP-only changes
+    if (isLocked && !isPtpOnlyChange) {
       toast.error('Cannot change fields when status is "Paid". All fields are locked.');
       return;
     }
@@ -934,6 +952,20 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
 
   // Gate submission for Paid (6) or Partially Paid (2) behind OTP
   const handleSubmit = async () => {
+    // Check if ONLY PTP date has changed (no status or amount changes)
+    const statusChanged = formData.repaymentStatus !== initialFormData.repaymentStatus;
+    const ptpDateChanged = formData.ptpDate === 'clear' 
+      ? initialFormData.ptpDate !== '' 
+      : formData.ptpDate !== initialFormData.ptpDate;
+    const amountChanged = formData.amountCollected !== initialFormData.amountCollected;
+    
+    // If ONLY PTP date changed, submit directly without any validation or OTP
+    if (ptpDateChanged && !statusChanged && !amountChanged) {
+      console.log('✅ Only PTP date changed, submitting directly without validation');
+      await performStatusUpdate();
+      return;
+    }
+    
     // Get the target status (what user selected, or current if unchanged)
     const targetStatus = formData.repaymentStatus || mapBackendStatusToDropdownValue(currentStatus);
     
@@ -1095,7 +1127,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   onChange={(e) => handleFormFieldChange('ptpDate', e.target.value)}
                   className="flex-1"
                   placeholder={application.ptp_date ? "Select PTP date" : "No PTP date set - select a date"}
-                  disabled={isLocked}
+                  disabled={false}
                 />
                 <Button
                   type="button"
@@ -1103,7 +1135,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
                   size="sm"
                   onClick={() => handleFormFieldChange('ptpDate', 'clear')}
                   className="px-3"
-                  disabled={isLocked}
+                  disabled={false}
                 >
                   Clear
                 </Button>
@@ -1175,7 +1207,7 @@ const StatusTab = ({ application, auditLogs, onStatusChange, onPtpDateChange, ad
             <div className="pt-4">
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitting || isLocked || !hasChanges}
+                disabled={isSubmitting || (isLocked && !isPtpOnlyChange) || !hasChanges}
                 className="w-full"
                 size="lg"
               >
