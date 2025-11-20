@@ -123,7 +123,8 @@ const MobileStatusCards = ({ applications }: MobileStatusCardsProps) => {
       title: "Paid Rejected",
       value: statusCounts.paid_rejected || 0,
       percentage: calculatePercentage(statusCounts.paid_rejected || 0, statusCounts.total),
-      className: "bg-pink-50 border-pink-200"
+      className: "bg-pink-50 border-pink-200",
+      hidden: true // Hide this card from display
     }
   ];
 

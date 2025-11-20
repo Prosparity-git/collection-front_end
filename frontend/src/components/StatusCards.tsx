@@ -58,8 +58,9 @@ const StatusCards = ({ statusCounts }: StatusCardsProps) => {
   if (!statusCounts) {
     return (
       <TooltipProvider>
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-1 sm:gap-2 md:gap-3">
-          {Array.from({ length: 7 }).map((_, index) => (
+        <div className="flex justify-center w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-1 sm:gap-2 md:gap-3 w-fit">
+            {Array.from({ length: 7 }).map((_, index) => (
             <Card key={index} className="bg-gray-50 border-gray-200 border shadow-sm">
               <CardHeader className="pb-1 pt-1 px-1 sm:pb-2 sm:pt-2 sm:px-2">
                 <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 text-center leading-tight">
@@ -71,6 +72,7 @@ const StatusCards = ({ statusCounts }: StatusCardsProps) => {
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
       </TooltipProvider>
     );
@@ -138,6 +140,7 @@ const StatusCards = ({ statusCounts }: StatusCardsProps) => {
       value: statusCounts.paid_rejected || 0,
       percentage: calculatePercentage(statusCounts.paid_rejected || 0, statusCounts.total),
       className: "bg-pink-50 border-pink-200",
+      hidden: true, // Hide this card from display
       tooltip: tooltipTexts["Paid Rejected"]
     }
   ];
@@ -147,8 +150,9 @@ const StatusCards = ({ statusCounts }: StatusCardsProps) => {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-1 sm:gap-2 md:gap-3">
-        {cards.map((card, index) => {
+      <div className="flex justify-center w-full">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-1 sm:gap-2 md:gap-3 w-fit">
+          {cards.map((card, index) => {
           const isOpen = openTooltipIndex === index;
           
           return (
@@ -190,6 +194,7 @@ const StatusCards = ({ statusCounts }: StatusCardsProps) => {
             </Tooltip>
           );
         })}
+        </div>
       </div>
     </TooltipProvider>
   );
