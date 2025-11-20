@@ -58,8 +58,8 @@ const StatusCards = ({ statusCounts }: StatusCardsProps) => {
   if (!statusCounts) {
     return (
       <TooltipProvider>
-        <div className="flex justify-center w-full">
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-1 sm:gap-2 md:gap-3 w-fit">
+        <div className="flex justify-center items-center w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-1 sm:gap-2 md:gap-3 w-fit mx-auto">
             {Array.from({ length: 7 }).map((_, index) => (
             <Card key={index} className="bg-gray-50 border-gray-200 border shadow-sm">
               <CardHeader className="pb-1 pt-1 px-1 sm:pb-2 sm:pt-2 sm:px-2">
@@ -150,8 +150,8 @@ const StatusCards = ({ statusCounts }: StatusCardsProps) => {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex justify-center w-full">
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-1 sm:gap-2 md:gap-3 w-fit">
+      <div className="flex justify-center items-center w-full">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-1 sm:gap-2 md:gap-3 w-fit mx-auto">
           {cards.map((card, index) => {
           const isOpen = openTooltipIndex === index;
           

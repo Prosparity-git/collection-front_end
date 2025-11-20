@@ -163,80 +163,19 @@ const Index = () => {
       .finally(() => setLoading(false));
   }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket]);
 
-  // Fetch summary when EMI month or filters change (excluding status filter)
-  // When status filter is applied, show only total count and zero out all other status counts
+  // Fetch summary when EMI month or filters change
+  // Sync all summary cards (including Total) with backend API response
   useEffect(() => {
     if (selectedEmiMonth) {
       setSummaryLoading(true);
-      // Check if status filter is applied
-      const hasStatusFilter = filters.status && filters.status.length > 0;
-      
-      if (hasStatusFilter) {
-        // If status filter is applied, set all status counts to 0 except total
-        // Total will be updated from totalCount in the separate effect below
-        setSummary({
-          total: totalCount || 0,
-          future: 0,
-          overdue: 0,
-          partially_paid: 0,
-          paid: 0,
-          foreclose: 0,
-          paid_pending_approval: 0,
-          paid_rejected: 0,
-          overdue_paid: 0
-        });
-        setSummaryLoading(false);
-      } else {
-        // If no status filter, get counts for all statuses within the filtered scope
-        const summaryFilters = { ...filters };
-        // Exclude status filter to get counts for all statuses in the filtered scope
-        delete summaryFilters.status;
-        
-        getCollectionsSummary(selectedEmiMonth, summaryFilters)
-          .then((summaryData) => {
-            // Use totalCount from applications which respects all filters
-            setSummary({
-              ...summaryData,
-              total: totalCount || summaryData.total || 0
-            });
-          })
-          .catch(() => setSummary(null))
-          .finally(() => setSummaryLoading(false));
-      }
+      getCollectionsSummary(selectedEmiMonth, filters)
+        .then((summaryData) => {
+          setSummary(summaryData);
+        })
+        .catch(() => setSummary(null))
+        .finally(() => setSummaryLoading(false));
     }
-  }, [selectedEmiMonth, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket, filters.status, totalCount]);
-
-  // Update summary total when totalCount changes (from filtered applications)
-  // This ensures Total card shows the correct count for the filtered set including status filter
-  useEffect(() => {
-    if (summary && totalCount !== undefined) {
-      // Check if status filter is applied
-      const hasStatusFilter = filters.status && filters.status.length > 0;
-      
-      if (hasStatusFilter) {
-        // If status filter is applied, update total and keep all other counts at 0
-        setSummary(prev => ({
-          ...prev,
-          total: totalCount,
-          future: 0,
-          overdue: 0,
-          partially_paid: 0,
-          paid: 0,
-          foreclose: 0,
-          paid_pending_approval: 0,
-          paid_rejected: 0,
-          overdue_paid: 0
-        }));
-      } else {
-        // If no status filter, just update the total
-        setSummary(prev => ({
-          ...prev,
-          total: totalCount
-        }));
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalCount, filters.status]);
+  }, [selectedEmiMonth, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket, filters.status]);
 
   // Update month options when current month changes (but don't change user selection)
   useEffect(() => {
