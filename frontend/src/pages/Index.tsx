@@ -163,16 +163,19 @@ const Index = () => {
       .finally(() => setLoading(false));
   }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket]);
 
-  // Fetch summary when EMI month changes
+  // Fetch summary when EMI month or filters change
+  // Sync all summary cards (including Total) with backend API response
   useEffect(() => {
     if (selectedEmiMonth) {
       setSummaryLoading(true);
       getCollectionsSummary(selectedEmiMonth, filters)
-        .then(setSummary)
+        .then((summaryData) => {
+          setSummary(summaryData);
+        })
         .catch(() => setSummary(null))
         .finally(() => setSummaryLoading(false));
     }
-  }, [selectedEmiMonth, filters]);
+  }, [selectedEmiMonth, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket, filters.status]);
 
   // Update month options when current month changes (but don't change user selection)
   useEffect(() => {

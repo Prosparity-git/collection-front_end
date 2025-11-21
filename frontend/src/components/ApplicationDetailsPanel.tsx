@@ -711,13 +711,13 @@ const ApplicationDetailsPanel = ({
       <div className="flex-1 flex-col-min-h-0">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
           <div className="flex-shrink-0 pt-3 sm:pt-4 border-b">
-            <TabsList className="grid w-full grid-cols-5 text-xs sm:text-sm h-auto min-w-0">
+            <TabsList className="grid w-full grid-cols-6 text-xs sm:text-sm h-auto min-w-0">
               <TabsTrigger value="contacts" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Contacts</TabsTrigger>
               <TabsTrigger value="status" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Status</TabsTrigger>
               <TabsTrigger value="comments" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Comments</TabsTrigger>
               <TabsTrigger value="field-visits" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Field Visits</TabsTrigger>
               <TabsTrigger value="details" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Details</TabsTrigger>
-              {false && <TabsTrigger value="docs" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Docs</TabsTrigger>}
+              <TabsTrigger value="docs" className="py-2 px-1 sm:px-2 text-xs sm:text-sm">Docs</TabsTrigger>
             </TabsList>
           </div>
           
@@ -771,14 +771,12 @@ const ApplicationDetailsPanel = ({
                 selectedMonth={selectedMonth}
               />
             </TabsContent>
-            {false && (
-              <TabsContent value="docs" className="m-0">
-                <DocsTab 
-                  key={`docs-${currentApplication?.loan_id}`}
-                  application={currentApplication}
-                />
-              </TabsContent>
-            )}
+            <TabsContent value="docs" className="m-0">
+              <DocsTab 
+                key={`docs-${currentApplication?.loan_id}`}
+                application={currentApplication}
+              />
+            </TabsContent>
           </div>
         </Tabs>
       </div>
