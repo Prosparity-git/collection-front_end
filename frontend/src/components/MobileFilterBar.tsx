@@ -349,39 +349,31 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
           <div className="p-4 space-y-6 border-t">
             <h3 className="font-medium text-gray-900 text-sm">Filter Applications</h3>
             
+            {/* EMI Month Selector - Outside of filter sections */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700">EMI Month</label>
+              <select
+                value={selectedEmiMonth || ''}
+                onChange={(e) => onEmiMonthChange?.(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select EMI Month</option>
+                {safeEmiMonthOptions.map((month) => (
+                  <option key={month} value={month}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Main Filters Section */}
             <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Main Filters</h4>
+              
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">PTP Date</label>
+                <label className="block text-xs font-medium text-gray-700">Branch</label>
                 <CustomMultiSelectFilter
-                  label="PTP Date"
-                  options={safeFilterOptions.ptpDateOptions}
-                  selected={safeFilters.ptpDate}
-                  onSelectionChange={(values) => handleTempFilterChange('ptpDate', values)}
-                  onOpenChange={(open) => setActiveOpenKey(open ? 'ptpDate' : null)}
-                  deferChangeUntilClose
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">EMI Month</label>
-                <select
-                  value={selectedEmiMonth || ''}
-                  onChange={(e) => onEmiMonthChange?.(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select EMI Month</option>
-                  {safeEmiMonthOptions.map((month) => (
-                    <option key={month} value={month}>
-                      {month}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Branches</label>
-                <CustomMultiSelectFilter
-                  label="Branches"
+                  label="Branch"
                   options={safeFilterOptions.branches}
                   selected={safeFilters.branch}
                   onSelectionChange={(values) => handleTempFilterChange('branch', values)}
@@ -391,9 +383,9 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Current Team Leads</label>
+                <label className="block text-xs font-medium text-gray-700">Collection TL</label>
                 <CustomMultiSelectFilter
-                  label="Current Team Leads"
+                  label="Collection TL"
                   options={safeFilterOptions.teamLeads}
                   selected={safeFilters.teamLead}
                   onSelectionChange={(values) => handleTempFilterChange('teamLead', values)}
@@ -403,9 +395,9 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Current RMs</label>
+                <label className="block text-xs font-medium text-gray-700">Collection RM</label>
                 <CustomMultiSelectFilter
-                  label="Current RMs"
+                  label="Collection RM"
                   options={safeFilterOptions.rms}
                   selected={safeFilters.rm}
                   onSelectionChange={(values) => handleTempFilterChange('rm', values)}
@@ -415,62 +407,14 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Source Team Leads</label>
+                <label className="block text-xs font-medium text-gray-700">DPD Bucket</label>
                 <CustomMultiSelectFilter
-                  label="Source Team Leads"
-                  options={safeFilterOptions.sourceTeamLeads}
-                  selected={safeFilters.sourceTeamLead}
-                  onSelectionChange={(values) => handleTempFilterChange('sourceTeamLead', values)}
-                  onOpenChange={(open) => setActiveOpenKey(open ? 'sourceTeamLead' : null)}
-                  deferChangeUntilClose
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Source RMs</label>
-                <CustomMultiSelectFilter
-                  label="Source RMs"
-                  options={safeFilterOptions.sourceRms}
-                  selected={safeFilters.sourceRm}
-                  onSelectionChange={(values) => handleTempFilterChange('sourceRm', values)}
-                  onOpenChange={(open) => setActiveOpenKey(open ? 'sourceRm' : null)}
-                  deferChangeUntilClose
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Dealers</label>
-                <CustomMultiSelectFilter
-                  label="Dealers"
-                  options={safeFilterOptions.dealers}
-                  selected={safeFilters.dealer}
-                  onSelectionChange={(values) => handleTempFilterChange('dealer', values)}
-                  onOpenChange={(open) => setActiveOpenKey(open ? 'dealer' : null)}
-                  deferChangeUntilClose
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Current DPD Bucket</label>
-                <CustomMultiSelectFilter
-                  label="Current DPD Bucket"
+                  label="DPD Bucket"
                   options={safeFilterOptions.dpdBuckets}
                   selected={safeFilters.dpdBucket}
                   onSelectionChange={(values) => handleTempFilterChange('dpdBucket', values)}
                   placeholder="Select DPD buckets"
                   onOpenChange={(open) => setActiveOpenKey(open ? 'dpdBucket' : null)}
-                  deferChangeUntilClose
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-700">Lenders</label>
-                <CustomMultiSelectFilter
-                  label="Lenders"
-                  options={safeFilterOptions.lenders}
-                  selected={safeFilters.lender}
-                  onSelectionChange={(values) => handleTempFilterChange('lender', values)}
-                  onOpenChange={(open) => setActiveOpenKey(open ? 'lender' : null)}
                   deferChangeUntilClose
                 />
               </div>
@@ -486,6 +430,59 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
                   deferChangeUntilClose
                 />
               </div>
+            </div>
+
+            {/* Other Filters Section */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Other Filters</h4>
+              
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Source Team Lead</label>
+                <CustomMultiSelectFilter
+                  label="Source Team Lead"
+                  options={safeFilterOptions.sourceTeamLeads}
+                  selected={safeFilters.sourceTeamLead}
+                  onSelectionChange={(values) => handleTempFilterChange('sourceTeamLead', values)}
+                  onOpenChange={(open) => setActiveOpenKey(open ? 'sourceTeamLead' : null)}
+                  deferChangeUntilClose
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Source RM</label>
+                <CustomMultiSelectFilter
+                  label="Source RM"
+                  options={safeFilterOptions.sourceRms}
+                  selected={safeFilters.sourceRm}
+                  onSelectionChange={(values) => handleTempFilterChange('sourceRm', values)}
+                  onOpenChange={(open) => setActiveOpenKey(open ? 'sourceRm' : null)}
+                  deferChangeUntilClose
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Dealer</label>
+                <CustomMultiSelectFilter
+                  label="Dealer"
+                  options={safeFilterOptions.dealers}
+                  selected={safeFilters.dealer}
+                  onSelectionChange={(values) => handleTempFilterChange('dealer', values)}
+                  onOpenChange={(open) => setActiveOpenKey(open ? 'dealer' : null)}
+                  deferChangeUntilClose
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Lender</label>
+                <CustomMultiSelectFilter
+                  label="Lender"
+                  options={safeFilterOptions.lenders}
+                  selected={safeFilters.lender}
+                  onSelectionChange={(values) => handleTempFilterChange('lender', values)}
+                  onOpenChange={(open) => setActiveOpenKey(open ? 'lender' : null)}
+                  deferChangeUntilClose
+                />
+              </div>
 
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700">Repayment</label>
@@ -495,6 +492,18 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
                   selected={safeFilters.repayment}
                   onSelectionChange={(values) => handleTempFilterChange('repayment', values)}
                   onOpenChange={(open) => setActiveOpenKey(open ? 'repayment' : null)}
+                  deferChangeUntilClose
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">PTP Date</label>
+                <CustomMultiSelectFilter
+                  label="PTP Date"
+                  options={safeFilterOptions.ptpDateOptions}
+                  selected={safeFilters.ptpDate}
+                  onSelectionChange={(values) => handleTempFilterChange('ptpDate', values)}
+                  onOpenChange={(open) => setActiveOpenKey(open ? 'ptpDate' : null)}
                   deferChangeUntilClose
                 />
               </div>

@@ -1,4 +1,4 @@
-export type ContactType = 'applicant' | 'co_applicant';
+export type ContactType = 'applicant' | 'co_applicant' | 'Hakam Singh Dhakar' | 'Jitendra Sharma';
 
 export interface OTPRequest {
   loan_id: string;

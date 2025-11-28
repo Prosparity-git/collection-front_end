@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Application } from "@/types/application";
 import { formatEmiMonth, formatCurrency } from "@/utils/formatters";
 import VehicleStatusBadge from "../VehicleStatusBadge";
+import { AlertTriangle } from "lucide-react";
 
 interface ApplicationDetailsProps {
   application: Application;
@@ -17,6 +18,10 @@ const ApplicationDetails = memo(({ application }: ApplicationDetailsProps) => {
       <div className="flex items-center space-x-2">
         <div className="font-semibold text-blue-900">{application.applicant_name}</div>
         <VehicleStatusBadge vehicleStatus={application.vehicle_status} />
+        {application.special_case_tags?.some(tag => tag.toLowerCase() === 'problematic') && 
+         (application.vehicle_status === 'Repossessed' || application.vehicle_status === 'Repossessed_sold') && (
+          <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" strokeWidth={2.5} />
+        )}
       </div>
       <div className="text-sm text-gray-600">
         <span className="font-medium">ID:</span> {application.applicant_id}

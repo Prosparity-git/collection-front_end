@@ -269,6 +269,10 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
   // Show only recent 2 calling logs
   const recentCallLogs = callingLogs.slice(0, 2);
 
+  // Hardcoded phone numbers for special contact types
+  const HAKAM_PHONE = '98934 64917';
+  const JITENDRA_PHONE = '99815 08816';
+
   // Build contacts array from API data and calling statuses
   const buildContactsFromAPI = () => {
     if (!apiContacts) return [];
@@ -312,7 +316,25 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
         callingStatus: localContactStatuses.reference || '3',
         contactTypeId: 4, // 4 for Reference
         relationship: reference.relationship
-      })) || []
+      })) || [],
+      {
+        type: "Jitendra Sharma",
+        displayType: "Jitendra Sharma",
+        name: "Jitendra Sharma",
+        mobile: JITENDRA_PHONE,
+        email: undefined,
+        callingStatus: localContactStatuses["Jitendra Sharma"] || '3',
+        contactTypeId: 5 // 5 for Jitendra Sharma
+      },
+      {
+        type: "Hakam Singh Dhakar",
+        displayType: "Hakam Singh Dhakar",
+        name: "Hakam Singh Dhakar",
+        mobile: HAKAM_PHONE,
+        email: undefined,
+        callingStatus: localContactStatuses["Hakam Singh Dhakar"] || '3',
+        contactTypeId: 6 // 6 for Hakam Singh Dhakar
+      }
     ];
 
     return contacts;
@@ -356,7 +378,25 @@ const ContactsTab = ({ application, callingLogs, onCallingStatusChange, selected
         email: undefined,
         callingStatus: localContactStatuses.reference || '3',
         contactTypeId: 4 // 4 for Reference
-      }] : []
+      }] : [],
+      {
+        type: "Jitendra Sharma",
+        displayType: "Jitendra Sharma",
+        name: "Jitendra Sharma",
+        mobile: JITENDRA_PHONE,
+        email: undefined,
+        callingStatus: localContactStatuses["Jitendra Sharma"] || '3',
+        contactTypeId: 5 // 5 for Jitendra Sharma
+      },
+      {
+        type: "Hakam Singh Dhakar",
+        displayType: "Hakam Singh Dhakar",
+        name: "Hakam Singh Dhakar",
+        mobile: HAKAM_PHONE,
+        email: undefined,
+        callingStatus: localContactStatuses["Hakam Singh Dhakar"] || '3',
+        contactTypeId: 6 // 6 for Hakam Singh Dhakar
+      }
     ];
   };
 

@@ -37,6 +37,7 @@ export interface ApplicationItem {
     reference?: string;
   };
   comments: string[];
+  special_case_tags?: string[]; // Special case tags like "Problematic"
 }
 
 export interface FilteredApplicationsResponse {

@@ -69,7 +69,7 @@ export const mapContactCallingStatusToId = (status: string): number => {
   return contactCallingStatusMap[status.toLowerCase()] ?? 3; // Default to "not called"
 };
 
-// Mapping function for contact types (applicant, co_applicant, guarantor, reference)
+// Mapping function for contact types (applicant, co_applicant, guarantor, reference, Jitendra Sharma, Hakam Singh Dhakar)
 export const mapContactTypeToId = (contactType: string): number => {
   // If contactType is already a number, return it directly
   if (!isNaN(Number(contactType))) {
@@ -81,8 +81,16 @@ export const mapContactTypeToId = (contactType: string): number => {
     "applicant": 1,
     "co_applicant": 2,
     "guarantor": 3,
-    "reference": 4
+    "reference": 4,
+    "jitendra sharma": 5,
+    "hakam singh dhakar": 6
   };
+  
+  // Try exact match first (case-sensitive for special names)
+  if (contactType === "Jitendra Sharma") return 5;
+  if (contactType === "Hakam Singh Dhakar") return 6;
+  
+  // Then try case-insensitive match
   return contactTypeMap[contactType.toLowerCase()] ?? 1; // Default to applicant
 };
 
