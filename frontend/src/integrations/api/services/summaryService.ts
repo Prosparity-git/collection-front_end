@@ -70,6 +70,9 @@ export class SummaryService {
       if (filters.repayment && filters.repayment.length > 0) {
         queryParams.append('demand_num', filters.repayment.join(','));
       }
+      if (filters.specialCaseFilter && filters.specialCaseFilter.length > 0) {
+        queryParams.append('special_case_filter', filters.specialCaseFilter.join(','));
+      }
       // Note: demand_num filter is now properly mapped from frontend repayment filter
     }
 

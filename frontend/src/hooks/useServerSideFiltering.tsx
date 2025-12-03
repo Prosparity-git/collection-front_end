@@ -14,7 +14,8 @@ export const useServerSideFiltering = () => {
     repayment: [],
     lastMonthBounce: [],
     ptpDate: [],
-    vehicleStatus: []
+    vehicleStatus: [],
+    specialCaseFilter: []
   });
 
   const handleFilterChange = useCallback((key: string, values: string[]) => {
@@ -36,7 +37,8 @@ export const useServerSideFiltering = () => {
       repayment: [],
       lastMonthBounce: [],
       ptpDate: [],
-      vehicleStatus: []
+      vehicleStatus: [],
+      specialCaseFilter: []
     });
   }, []);
 

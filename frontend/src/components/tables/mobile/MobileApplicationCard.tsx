@@ -3,7 +3,7 @@ import { Application } from "@/types/application";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPtpDate, formatEmiMonth } from "@/utils/formatters";
-import { Phone, Eye, Building, User, UserCircle, IndianRupee, Check, X, Hash, Clock, CreditCard } from "lucide-react";
+import { Phone, Eye, Building, User, UserCircle, IndianRupee, Check, X, Hash, Clock, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommentsService } from "@/integrations/api/services/commentsService";
 import { COMMENT_TYPES } from "@/integrations/api/services/commentsService";
@@ -108,6 +108,10 @@ const MobileApplicationCard = memo(({
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-bold text-lg text-gray-900">{application.applicant_name}</h3>
               <VehicleStatusBadge vehicleStatus={application.vehicle_status} />
+              {application.special_case_tags?.some(tag => tag.toLowerCase() === 'problematic') && 
+               (application.vehicle_status === 'Repossessed' || application.vehicle_status === 'Repossessed_sold') && (
+                <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" strokeWidth={2.5} />
+              )}
             </div>
             <p className="text-sm text-gray-600">ID: {application.applicant_id}</p>
           </div>

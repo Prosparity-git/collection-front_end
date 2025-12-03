@@ -63,15 +63,21 @@ export default function OTPVerificationModal({ open, onClose, onSuccess, applica
     }
   }, [open, loanId]);
 
+  // Hardcoded phone numbers for special contact types
+  const HAKAM_PHONE = '98934 64917';
+  const JITENDRA_PHONE = '99815 08816';
+
   const contactMobile = useMemo(() => {
-    if (!contacts) return '';
-    
     switch (selectedContactType) {
       case 'applicant':
-        return contacts.applicant?.phone || '';
+        return contacts?.applicant?.phone || '';
       case 'co_applicant':
         // For co-applicant, use the first co-applicant's phone number
-        return contacts.co_applicants?.[0]?.phone || '';
+        return contacts?.co_applicants?.[0]?.phone || '';
+      case 'Hakam Singh Dhakar':
+        return HAKAM_PHONE;
+      case 'Jitendra Sharma':
+        return JITENDRA_PHONE;
       default:
         return '';
     }
@@ -289,6 +295,24 @@ export default function OTPVerificationModal({ open, onClose, onSuccess, applica
                     </Label>
                   </div>
                 )}
+                <div className="flex items-start space-x-2 rounded-md border p-3">
+                  <RadioGroupItem value="Jitendra Sharma" id="contact-jitendra" className="mt-1" />
+                  <Label htmlFor="contact-jitendra" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Jitendra Sharma</div>
+                    <div className="text-sm text-muted-foreground">
+                      99815 08816
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-start space-x-2 rounded-md border p-3">
+                  <RadioGroupItem value="Hakam Singh Dhakar" id="contact-hakam" className="mt-1" />
+                  <Label htmlFor="contact-hakam" className="flex-1 cursor-pointer">
+                    <div className="font-medium">Hakam Singh Dhakar</div>
+                    <div className="text-sm text-muted-foreground">
+                      98934 64917
+                    </div>
+                  </Label>
+                </div>
               </RadioGroup>
             )}
             {selectedContactType && contactMobile && (

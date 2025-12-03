@@ -15,6 +15,7 @@ export interface FilterState {
   ptpDate: string[]; // Changed to string[] to handle display labels
   vehicleStatus: string[];
   dpdBucket: string[];
+  specialCaseFilter: string[];
 }
 
 export interface AvailableOptions {
@@ -33,6 +34,7 @@ export interface AvailableOptions {
   vehicleStatusOptions: string[];
   demand_num: string[]; // Added to match backend API response
   dpdBuckets?: string[]; // From backend dpd_buckets
+  specialCaseFilterOptions?: string[]; // Special case filter options from backend
 }
 
 // Export alias for compatibility

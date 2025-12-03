@@ -12,6 +12,7 @@ export interface ApplicationFilterParams {
   rm_name?: string;
   tl_name?: string;
   ptp_date_filter?: string;
+  special_case_filter?: string;
   offset?: number;
   limit?: number;
 }
@@ -37,6 +38,7 @@ export interface ApplicationItem {
     reference?: string;
   };
   comments: string[];
+  special_case_tags?: string[]; // Special case tags like "Problematic"
 }
 
 export interface FilteredApplicationsResponse {
@@ -59,6 +61,7 @@ export class ApplicationService {
     if (params.rm_name) queryParams.append('rm_name', params.rm_name);
     if (params.tl_name) queryParams.append('tl_name', params.tl_name);
     if (params.ptp_date_filter) queryParams.append('ptp_date_filter', params.ptp_date_filter);
+    if (params.special_case_filter) queryParams.append('special_case_filter', params.special_case_filter);
     if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
     if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
 

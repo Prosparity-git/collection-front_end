@@ -77,6 +77,7 @@ export interface Application {
   total_pos?: number; // Total POS from backend
   nach_status?: number; // NACH status (1 = success, 2+ = failure)
   reason?: string | null; // Reason for NACH failure
+  special_case_tags?: string[]; // Special case tags like "Problematic"
 }
 
 export interface AuditLog {

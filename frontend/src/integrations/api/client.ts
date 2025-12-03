@@ -137,6 +137,7 @@ interface ApiApplicationItem {
   total_pos?: number; // Total POS from backend
   nach_status?: number; // NACH status (1 = success, 2+ = failure)
   reason?: string | null; // Reason for NACH failure
+  special_case_tags?: string[]; // Special case tags like "Problematic"
 }
 
 interface ApiFilteredResponse {
@@ -220,7 +221,8 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
     nach_status: apiItem.nach_status !== undefined && apiItem.nach_status !== null 
       ? (typeof apiItem.nach_status === 'string' ? parseInt(apiItem.nach_status, 10) : apiItem.nach_status)
       : undefined,
-    reason: apiItem.reason ?? null
+    reason: apiItem.reason ?? null,
+    special_case_tags: apiItem.special_case_tags || []
   };
 }
 
@@ -319,6 +321,7 @@ export async function getApplicationsFromBackend(
     ptpDate?: string[];
     vehicleStatus?: string[];
     search?: string;
+    specialCaseFilter?: string[];
   } = {}
 ) {
   const params = new URLSearchParams();
@@ -364,6 +367,9 @@ export async function getApplicationsFromBackend(
   }
   if ((additionalFilters as any).dpdBucket && (additionalFilters as any).dpdBucket.length > 0) {
     params.append('current_dpd_bucket', (additionalFilters as any).dpdBucket.join(','));
+  }
+  if (additionalFilters.specialCaseFilter && additionalFilters.specialCaseFilter.length > 0) {
+    params.append('special_case_filter', additionalFilters.specialCaseFilter.join(','));
   }
 
   const response = await fetch(`${API_BASE_URL}/applications/?${params.toString()}`, {
