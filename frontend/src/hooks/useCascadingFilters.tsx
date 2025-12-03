@@ -54,7 +54,8 @@ export const useCascadingFilters = () => {
     lastMonthBounce: [],
     ptpDate: [],
     vehicleStatus: [],
-    dpdBucket: []
+    dpdBucket: [],
+    specialCaseFilter: []
   });
 
   const [availableOptions, setAvailableOptions] = useState<CascadingFilterOptions>({
@@ -250,7 +251,8 @@ export const useCascadingFilters = () => {
       lastMonthBounce: [],
       ptpDate: [],
       vehicleStatus: [],
-      dpdBucket: []
+      dpdBucket: [],
+      specialCaseFilter: []
     });
   }, []);
 
@@ -270,7 +272,8 @@ export const useCascadingFilters = () => {
       lastMonthBounce: [],
       ptpDate: [],
       vehicleStatus: [],
-      dpdBucket: []
+      dpdBucket: [],
+      specialCaseFilter: []
     });
   }, []);
 

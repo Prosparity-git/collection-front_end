@@ -20,6 +20,7 @@ interface MobileFilterBarProps {
     lastMonthBounce: string[];
     ptpDate: string[];
     dpdBucket: string[];
+    specialCaseFilter?: string[];
   };
   onFilterChange: (key: string, values: string[]) => void;
   availableOptions: {
@@ -36,6 +37,7 @@ interface MobileFilterBarProps {
     lastMonthBounce: string[];
     ptpDateOptions: string[];
     dpd_buckets?: string[];
+    specialCaseFilterOptions?: string[];
   };
   emiMonthOptions?: string[];
   selectedEmiMonth?: string | null;
@@ -45,6 +47,8 @@ interface MobileFilterBarProps {
 const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOptions, selectedEmiMonth, onEmiMonthChange }: MobileFilterBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeOpenKey, setActiveOpenKey] = useState<string | null>(null);
+  const [mainFiltersOpen, setMainFiltersOpen] = useState(true);
+  const [otherFiltersOpen, setOtherFiltersOpen] = useState(true);
   
   // Temporary filters - what user is currently selecting
   const [tempFilters, setTempFilters] = useState(filters);
@@ -126,6 +130,7 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
     lastMonthBounce: mergedAvailableOptions?.lastMonthBounce || [],
     ptpDateOptions: mergedAvailableOptions?.ptpDateOptions || [],
     dpdBuckets: mergedAvailableOptions?.dpd_buckets || [],
+    specialCaseFilterOptions: mergedAvailableOptions?.specialCaseFilterOptions || [],
   };
 
   // Use the prop if provided, else fallback to availableOptions.emiMonths
@@ -145,6 +150,7 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
     lastMonthBounce: tempFilters?.lastMonthBounce || [],
     ptpDate: tempFilters?.ptpDate || [],
     dpdBucket: tempFilters?.dpdBucket || [],
+    specialCaseFilter: tempFilters?.specialCaseFilter || [],
   };
 
   // Calculate total active filters with proper typing (use applied filters for badge)
@@ -367,10 +373,20 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
             </div>
 
             {/* Main Filters Section */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Main Filters</h4>
-              
-              <div className="space-y-2">
+            <Collapsible open={mainFiltersOpen} onOpenChange={setMainFiltersOpen} className="space-y-4">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors">
+                  <h4 className="text-sm font-semibold text-gray-700">Main Filters</h4>
+                  {mainFiltersOpen ? (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700">Branch</label>
                 <CustomMultiSelectFilter
                   label="Branch"
@@ -429,14 +445,26 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
                   onOpenChange={(open) => setActiveOpenKey(open ? 'status' : null)}
                   deferChangeUntilClose
                 />
-              </div>
-            </div>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Other Filters Section */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Other Filters</h4>
-              
-              <div className="space-y-2">
+            <Collapsible open={otherFiltersOpen} onOpenChange={setOtherFiltersOpen} className="space-y-4">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors">
+                  <h4 className="text-sm font-semibold text-gray-700">Other Filters</h4>
+                  {otherFiltersOpen ? (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700">Source Team Lead</label>
                 <CustomMultiSelectFilter
                   label="Source Team Lead"
@@ -508,6 +536,19 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700">Special Case / Repo</label>
+                <CustomMultiSelectFilter
+                  label="Special Case / Repo"
+                  options={safeFilterOptions.specialCaseFilterOptions}
+                  selected={safeFilters.specialCaseFilter}
+                  onSelectionChange={(values) => handleTempFilterChange('specialCaseFilter', values)}
+                  placeholder="Select special case / repo"
+                  onOpenChange={(open) => setActiveOpenKey(open ? 'specialCaseFilter' : null)}
+                  deferChangeUntilClose
+                />
+              </div>
+
               {/* Last Month Status Filter - Hidden as requested */}
               {/* <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700">Last Month Status</label>
@@ -518,7 +559,9 @@ const MobileFilterBar = ({ filters, onFilterChange, availableOptions, emiMonthOp
                   onSelectionChange={(values) => handleTempFilterChange('lastMonthBounce', values)}
                 />
               </div> */}
-            </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Action Buttons */}
             <div className="mt-6 flex gap-3">

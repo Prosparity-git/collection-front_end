@@ -42,7 +42,8 @@ const Index = () => {
     lastMonthBounce: [],
     ptpDate: [],
     vehicleStatus: [],
-    dpdBucket: []
+    dpdBucket: [],
+    specialCaseFilter: []
   });
   const [selectedEmiMonthRaw, setSelectedEmiMonthRaw] = useState(getCurrentEmiMonth());
   const [summary, setSummary] = useState(null);
@@ -129,7 +130,8 @@ const Index = () => {
       lastMonthBounce: filters.lastMonthBounce,
       ptpDate: filters.ptpDate,
       vehicleStatus: filters.vehicleStatus,
-      dpdBucket: filters.dpdBucket
+      dpdBucket: filters.dpdBucket,
+      specialCaseFilter: filters.specialCaseFilter
     };
     
     console.log('📡 Sending filter params to API:', filterParams);
@@ -161,7 +163,7 @@ const Index = () => {
         setApplications([]);
       })
       .finally(() => setLoading(false));
-  }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket]);
+  }, [selectedEmiMonth, currentPage, searchTerm, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.status, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket, filters.specialCaseFilter]);
 
   // Fetch summary when EMI month or filters change
   // Sync all summary cards (including Total) with backend API response
@@ -175,7 +177,7 @@ const Index = () => {
         .catch(() => setSummary(null))
         .finally(() => setSummaryLoading(false));
     }
-  }, [selectedEmiMonth, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket, filters.status]);
+  }, [selectedEmiMonth, filters.branch, filters.teamLead, filters.rm, filters.sourceTeamLead, filters.sourceRm, filters.dealer, filters.lender, filters.repayment, filters.lastMonthBounce, filters.ptpDate, filters.vehicleStatus, filters.dpdBucket, filters.status, filters.specialCaseFilter]);
 
   // Update month options when current month changes (but don't change user selection)
   useEffect(() => {
@@ -278,7 +280,7 @@ const Index = () => {
     console.log('Filter change - values content:', values);
     
     // Special handling for filters that should trigger fresh data fetch
-    const shouldFetchFreshData = ['ptpDate', 'repayment', 'status', 'branch', 'dealer', 'lender', 'rm', 'teamLead', 'sourceRm', 'sourceTeamLead', 'dpdBucket'];
+    const shouldFetchFreshData = ['ptpDate', 'repayment', 'status', 'branch', 'dealer', 'lender', 'rm', 'teamLead', 'sourceRm', 'sourceTeamLead', 'dpdBucket', 'specialCaseFilter'];
     
     if (shouldFetchFreshData.includes(key)) {
       console.log('🔄 Filter change requires fresh data fetch:', key);
@@ -341,6 +343,7 @@ const Index = () => {
     repayments: filterOptions.demand_num, // Map demand_num to repayments
     dpd_buckets: filterOptions.dpd_buckets,
     lastMonthBounce: ['Not paid', 'Paid on time', '1-5 days late', '6-15 days late', '15+ days late'], // Hardcoded options
+    specialCaseFilterOptions: filterOptions.special_case_filter_options || [], // Map special_case_filter_options
   };
 
   // Debug logging for filter options

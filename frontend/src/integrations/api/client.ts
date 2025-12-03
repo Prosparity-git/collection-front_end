@@ -321,6 +321,7 @@ export async function getApplicationsFromBackend(
     ptpDate?: string[];
     vehicleStatus?: string[];
     search?: string;
+    specialCaseFilter?: string[];
   } = {}
 ) {
   const params = new URLSearchParams();
@@ -366,6 +367,9 @@ export async function getApplicationsFromBackend(
   }
   if ((additionalFilters as any).dpdBucket && (additionalFilters as any).dpdBucket.length > 0) {
     params.append('current_dpd_bucket', (additionalFilters as any).dpdBucket.join(','));
+  }
+  if (additionalFilters.specialCaseFilter && additionalFilters.specialCaseFilter.length > 0) {
+    params.append('special_case_filter', additionalFilters.specialCaseFilter.join(','));
   }
 
   const response = await fetch(`${API_BASE_URL}/applications/?${params.toString()}`, {

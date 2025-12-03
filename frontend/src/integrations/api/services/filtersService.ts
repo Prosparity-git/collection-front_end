@@ -14,6 +14,7 @@ export interface FiltersOptionsResponse {
   source_team_leads: string[]; // Added for source TL options
   source_rms: string[]; // Added for source RM options
   demand_num: string[]; // Added to match backend API response
+  special_case_filter_options?: string[]; // Special case filter options from backend
 }
 
 // Cascading filters API types

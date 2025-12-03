@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import CustomMultiSelectFilter from "@/components/CustomMultiSelectFilter";
 import PtpDateFilter from "@/components/filters/PtpDateFilter";
 import { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface FilterContentProps {
   filters: any;
@@ -14,6 +16,9 @@ interface FilterContentProps {
 
 const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onCancel, onDropdownOpenChange }: FilterContentProps) => {
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  const [mainFiltersOpen, setMainFiltersOpen] = useState(true);
+  const [otherFiltersOpen, setOtherFiltersOpen] = useState(true);
+  
   const setOpen = (key: string) => (v: boolean) => {
     setOpenMap(prev => ({ ...prev, [key]: v }));
     onDropdownOpenChange?.(key, v);
@@ -22,9 +27,19 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
   return (
     <div className="p-4 bg-gray-50 border-b">
       {/* Main Filters Section */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Main Filters</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <Collapsible open={mainFiltersOpen} onOpenChange={setMainFiltersOpen} className="mb-6">
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center justify-between w-full mb-4 hover:bg-gray-100 rounded-md p-2 -m-2 transition-colors">
+            <h3 className="text-sm font-semibold text-gray-700">Main Filters</h3>
+            {mainFiltersOpen ? (
+              <ChevronUp className="h-4 w-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {/* Branch Filter */}
           <CustomMultiSelectFilter
             label="Branch"
@@ -79,13 +94,24 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
             onOpenChange={setOpen('status')}
             deferChangeUntilClose
           />
-        </div>
-      </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Other Filters Section */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Other Filters</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <Collapsible open={otherFiltersOpen} onOpenChange={setOtherFiltersOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center justify-between w-full mb-4 hover:bg-gray-100 rounded-md p-2 -m-2 transition-colors">
+            <h3 className="text-sm font-semibold text-gray-700">Other Filters</h3>
+            {otherFiltersOpen ? (
+              <ChevronUp className="h-4 w-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {/* Source Team Lead Filter */}
           <CustomMultiSelectFilter
             label="Source Team Lead"
@@ -148,6 +174,17 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
             availableOptions={availableOptions.ptpDateOptions || []}
           />
 
+          {/* Special Case / Repo Filter */}
+          <CustomMultiSelectFilter
+            label="Special Case / Repo"
+            options={availableOptions?.specialCaseFilterOptions || []}
+            selected={filters.specialCaseFilter || []}
+            onSelectionChange={(values) => onFilterChange('specialCaseFilter', values)}
+            placeholder="Select special case / repo"
+            onOpenChange={setOpen('specialCaseFilter')}
+            deferChangeUntilClose
+          />
+
           {/* Last Month Bounce Filter - Hidden as requested */}
           {/* <CustomMultiSelectFilter
             label="Last Month Bounce"
@@ -165,8 +202,9 @@ const FilterContent = ({ filters, availableOptions, onFilterChange, onClose, onC
             onSelectionChange={(values) => onFilterChange('vehicleStatus', values)}
             placeholder="Select vehicle status"
           /> */}
-        </div>
-      </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Action Buttons */}
       {(onClose || onCancel) && (
