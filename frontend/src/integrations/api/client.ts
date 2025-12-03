@@ -222,7 +222,14 @@ export function mapApiResponseToApplication(apiItem: ApiApplicationItem): any {
       ? (typeof apiItem.nach_status === 'string' ? parseInt(apiItem.nach_status, 10) : apiItem.nach_status)
       : undefined,
     reason: apiItem.reason ?? null,
-    special_case_tags: apiItem.special_case_tags || []
+    special_case_tags: (() => {
+      const tags = apiItem.special_case_tags || [];
+      // Debug logging for special_case_tags
+      if (tags.length > 0) {
+        console.log(`🔍 Mapping application ${apiItem.application_id} - special_case_tags from API:`, tags);
+      }
+      return tags;
+    })()
   };
 }
 
