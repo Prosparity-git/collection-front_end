@@ -1,6 +1,6 @@
 export const VEHICLE_STATUS_OPTIONS = [
   { value: "none", label: "None", color: "bg-gray-100 text-gray-800 border border-gray-200" },
-  { value: "Repossessed", label: "Repo", color: "bg-red-100 text-red-800 border border-red-200" },
+  { value: "Repossessed", label: "Repo", color: "bg-green-100 text-green-800 border border-green-200" },
   { value: "Need to repossess", label: "Need to repossess", color: "bg-orange-100 text-orange-800 border border-orange-200" },
   { value: "Third party", label: "Third party", color: "bg-blue-100 text-blue-800 border border-blue-200" },
   { value: "Repossessed_sold", label: "Repo-Sold", color: "bg-purple-100 text-purple-800 border border-purple-200" },

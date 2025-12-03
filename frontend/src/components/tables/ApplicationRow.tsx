@@ -2,7 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Application } from "@/types/application";
 import { formatEmiMonth, formatCurrency, formatPtpDate } from "@/utils/formatters";
-import { Check, X, IndianRupee, AlertTriangle } from "lucide-react";
+import { Check, X, IndianRupee } from "lucide-react";
 
 import StatusBadge from "./StatusBadge";
 import ApplicationDetails from "./ApplicationDetails";
@@ -106,10 +106,34 @@ const ApplicationRow = memo(({
           <div className="flex items-center gap-2">
             <span className="font-bold text-blue-800">{application.applicant_name}</span>
             <VehicleStatusBadge vehicleStatus={application.vehicle_status} />
-            {application.special_case_tags?.some(tag => tag.toLowerCase() === 'problematic') && 
-             (application.vehicle_status === 'Repossessed' || application.vehicle_status === 'Repossessed_sold') && (
-              <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" strokeWidth={2.5} />
-            )}
+            {(() => {
+              // Check for problematic tag - handle various formats
+              const tags = application.special_case_tags || [];
+              const hasProblematic = tags.some(tag => {
+                if (!tag) return false;
+                const normalizedTag = String(tag).toLowerCase().trim();
+                return normalizedTag === 'problematic';
+              });
+              
+              // Debug logging for troubleshooting
+              if (tags.length > 0) {
+                console.log(`🔍 [ApplicationRow] ${application.applicant_name} (${application.applicant_id}):`, {
+                  special_case_tags: tags,
+                  hasProblematic,
+                  tagsArray: tags,
+                  tagTypes: tags.map(t => typeof t)
+                });
+              }
+              
+              return hasProblematic ? (
+                <span 
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-700 text-white border border-red-800"
+                  title="Problematic Case"
+                >
+                  Problematic
+                </span>
+              ) : null;
+            })()}
           </div>
           <span className="text-xs text-gray-700">ID: {application.applicant_id}</span>
           <span className="text-xs text-gray-700">
